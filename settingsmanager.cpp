@@ -94,7 +94,8 @@ void SettingsManager::loadTranslations(QString languageName) {
                    << "spritecategories.xml"
                    << "spritedata.xml"
                    << "tilebehaviors.xml"
-                   << "tilesetnames.txt";
+                   << "tilesetnames.txt"
+                   << "environmentnames.txt";
 
     foreach (QString transFile, translateFiles) {
         QString path = dataPath("languages/"+languageName+"/"+transFile);

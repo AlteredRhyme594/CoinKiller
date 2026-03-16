@@ -162,7 +162,9 @@ private:
     QSpinBox* progPathId;
     QComboBox* musicId;
     QMap<int, QPair<int, QString>> musicIds;
-    QSpinBox* unk1;
+    // QSpinBox* unk1;
+    QMap<int, QPair<int, QString>> environmentNames;
+    QComboBox* unk1;
 
     QSpinBox* boundingId;
     QPushButton* editBounding;
@@ -171,6 +173,9 @@ private:
     QSpinBox* backgroundId;
     QPushButton* editBackground;
     ZoneBackgroundWidget* backgroundWidget;
+
+    QComboBox* cameraMode;
+    QMap<int, QString> cameraModes;
 
     QGroupBox* cameraFlagGroup;
     QCheckBox* camFlag1;
@@ -191,6 +196,8 @@ private:
     void updateList();
     void updateInfo();
 
+    void loadEnvironmentNames();
+
     bool editingAZone = false;
     bool handleChanges = true;
 
@@ -203,12 +210,14 @@ private slots:
     void handleProgPathIDChange(int ppIDVal);
     void handleMusicIDChange(QString text);
     void handleMultiPlayerTrackingChange(QString text);
-    void handleUnk1Change(int val);
-    void handleCameraFlagsChange(bool checked);
+    // void handleUnk1Change(int val);
+    void handleUnk1Change(QString text);
     void handleSelectContentsClicked();
     void handleScreenshotClicked();
     void handleBoundingIDChange(int val);
     void handleBackgroundIDChange(int val);
+    void handleCameraModeChange(QString text);
+    void handleCameraFlagsChange(bool checked);
     void handleEditBoundingClicked();
     void handleEditBackgroundClicked();
 };

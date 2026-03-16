@@ -127,6 +127,36 @@ private:
 };
 
 
+class SetPathId : public QUndoCommand
+{
+public:
+    SetPathId(Entrance *entr, quint8 pathId);
+
+    void undo() override;
+    void redo() override;
+
+private:
+    Entrance *const entr;
+    const quint8 newPathId;
+    const quint8 oldPathId;
+};
+
+
+class SetConnectedPipeExitDirection : public QUndoCommand
+{
+public:
+    SetConnectedPipeExitDirection(Entrance *entr, quint8 cpd);
+
+    void undo() override;
+    void redo() override;
+
+private:
+    Entrance *const entr;
+    const quint8 newCPD;
+    const quint8 oldCPD;
+};
+
+
 class SetSettingsBit : public QUndoCommand
 {
 public:

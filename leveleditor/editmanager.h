@@ -54,7 +54,7 @@ public:
 
     void selectZoneContents(Zone* zone);
 
-    void setDrawType(ObjectType drawType) { this->drawType = drawType; }
+    void setDrawType(ObjectType drawType) { this->drawType = drawType; emit drawTypeChanged(this->drawType); }
     void setObject(int selObject, int selTileset);
     void setLayer(int selLayer) { this->selLayer = selLayer; }
     void setSprite(int selSprite);
@@ -70,6 +70,8 @@ signals:
     void selectdObjectChanged(Object* obj);
     void updateEditors();
     void updateLevelView();
+    void drawTypeChanged(ObjectType drawType);
+    void selectedBgdatObjectChanged(int selObject, int selTileset);
 
 private:
     Level *level;

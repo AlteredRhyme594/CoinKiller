@@ -53,6 +53,20 @@ EntranceEditorWidget::EntranceEditorWidget(QList<Entrance*> *entrances, QUndoSta
     returnToWM = new QCheckBox(tr("Return to Worldmap"));
     connect(returnToWM, &QAbstractButton::toggled, this, &EntranceEditorWidget::handleReturnToWMChange);
 
+    connectedPipe = new QCheckBox(tr("Connected Pipe"));
+    connect(connectedPipe, &QAbstractButton::toggled, this, &EntranceEditorWidget::handleConnectedPipeChange);
+
+    pathId = new QSpinBox();
+    pathId->setRange(0, 255);
+    connect(pathId, &QSpinBox::valueChanged, this, &EntranceEditorWidget::handlePathIdChange);
+
+    connectedPipeReversed = new QCheckBox(tr("Connected Pipe Reversed"));
+    connect(connectedPipeReversed, &QAbstractButton::toggled, this, &EntranceEditorWidget::handleConnectedPipeReversedChange);
+
+    connectedPipeExitDirection = new QComboBox();
+    connectedPipeExitDirection->addItems({ "Up", "Down", "Left", "Right" });
+    connect(connectedPipeExitDirection, &QComboBox::currentIndexChanged, this, &EntranceEditorWidget::handleConnectedPipeExitDirectionChange);
+
     entrancesList = new QListWidget();
     connect(entrancesList, &QListWidget::itemClicked, this, &EntranceEditorWidget::handleEntranceListIndexChanged);
 
@@ -98,6 +112,13 @@ EntranceEditorWidget::EntranceEditorWidget(QList<Entrance*> *entrances, QUndoSta
     subLayout->addWidget(enterable, 7, 0, 1, 2);
 
     subLayout->addWidget(returnToWM, 7, 2, 1, 2);
+
+    subLayout->addWidget(connectedPipe, 8, 0, 1, 2);
+    subLayout->addWidget(connectedPipeReversed, 8, 2, 1, 2);
+    subLayout->addWidget(new QLabel(tr("Path ID:")), 9, 0, 1, 1, Qt::AlignRight);
+    subLayout->addWidget(pathId, 9, 1, 1, 1);
+    subLayout->addWidget(new QLabel(tr("CP Exit Direction:")), 9, 2, 1, 1, Qt::AlignRight);
+    subLayout->addWidget(connectedPipeExitDirection, 9, 3, 1, 1);
 
     updateList();
     updateInfo();
@@ -203,6 +224,10 @@ void EntranceEditorWidget::updateInfo()
     unk2->setValue(editEntrance->getUnk2());
     enterable->setChecked((editEntrance->getSettings() & 128) >> 7 == false);
     returnToWM->setChecked((editEntrance->getSettings() & 16) >> 4 == 1);
+    connectedPipe->setChecked((editEntrance->getSettings() & 8) >> 3 == 1);
+    pathId->setValue(editEntrance->getPathId());
+    connectedPipeReversed->setChecked((editEntrance->getSettings() & 1) == 1);
+    connectedPipeExitDirection->setCurrentIndex(editEntrance->getConnectedPipeExitDirection());
     handleChanges = true;
 }
 
@@ -275,4 +300,28 @@ void EntranceEditorWidget::handleReturnToWMChange(bool returnToWM)
 {
     if (!handleChanges) return;
     undoStack->push(new Commands::EntranceCmd::SetSettingsBit(editEntrance, returnToWM, 4));
+}
+
+void EntranceEditorWidget::handlePathIdChange(int pathId)
+{
+    if (!handleChanges) return;
+    undoStack->push(new Commands::EntranceCmd::SetPathId(editEntrance, pathId));
+}
+
+void EntranceEditorWidget::handleConnectedPipeChange(bool connectedPipe)
+{
+    if (!handleChanges) return;
+    undoStack->push(new Commands::EntranceCmd::SetSettingsBit(editEntrance, connectedPipe, 3));
+}
+
+void EntranceEditorWidget::handleConnectedPipeReversedChange(bool connectedPipeReversed)
+{
+    if (!handleChanges) return;
+    undoStack->push(new Commands::EntranceCmd::SetSettingsBit(editEntrance, connectedPipeReversed, 0));
+}
+
+void EntranceEditorWidget::handleConnectedPipeExitDirectionChange(int direction)
+{
+    if (!handleChanges) return;
+    undoStack->push(new Commands::EntranceCmd::SetConnectedPipeExitDirection(editEntrance, direction));
 }

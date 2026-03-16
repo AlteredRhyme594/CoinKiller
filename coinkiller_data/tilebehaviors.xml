@@ -58,6 +58,7 @@
 			<value id = "2" description = "Wood Block" />
 			<value id = "3" description = "Red Block" />
 			<value id = "4" description = "Blue Block" />
+			<value id = "5" description = "Gold Block? *" />
 		</behavior>
 
 		<behavior value = "6" description = "Brick Block" />
@@ -164,8 +165,8 @@
 		<behavior value = "13" description = "Liquid">
 			<value id = "0" description = "unk0" />
 			<value id = "1" description = "unk1" />
-			<value id = "2" description = "unk2" />
-			<value id = "3" description = "unk3" />
+			<value id = "2" description = "Lava (Broken) *" />
+			<value id = "3" description = "Poison (Broken) *" />
 			<value id = "4" description = "Quicksand" />
 		</behavior>
 
@@ -243,11 +244,18 @@
 			<value id = "3" description = "3x1: Left" />
 			<value id = "4" description = "3x1: Middle" />
 			<value id = "5" description = "3x1: Right" />
+			<value id = "6" description = "Unk? *" />
 		</behavior>
 
 		<behavior value = "20" description = "No Jump" />
 		<behavior value = "21" description = "Horizontal Climbing Rope" />
 		<behavior value = "22" description = "Vertical Climbing Pole" />
+		<behavior value = "23" description = "Unk 0x17 *" />
+		<behavior value = "25" description = "Unk 0x19 *" />
+		<behavior value = "27" description = "Carpet? 0x1b *" />
+		<behavior value = "28" description = "Unk 0x1c *" />
+		<behavior value = "29" description = "Unk 0x1d *" />
+		<behavior value = "30" description = "Bouncy Block (!Player) *" />
 		<behavior value = "33" description = "Clown Car Flash Safe Area" />
 		<behavior value = "34" description = "No Headbonk" />
 		<behavior value = "35" description = "Note-Block" />

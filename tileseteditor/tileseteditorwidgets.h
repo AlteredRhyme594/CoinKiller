@@ -59,6 +59,10 @@ public:
     void setBGColor(QColor bgColor) { this->bgColor = bgColor; update(); }
     void setMarkers(bool value) { this->showMarkers = value; update(); }
 
+    int getSelectedObjN() { return this->objNbr; }
+    int getSelectedObjX() { return this->selX; }
+    int getSelectedObjY() { return this->selY; }
+
 signals:
     void updateSelTileLabel(QString text);
     void tilesetChanged();

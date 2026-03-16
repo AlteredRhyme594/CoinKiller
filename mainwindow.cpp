@@ -15,6 +15,7 @@
     with CoinKiller. If not, see http://www.gnu.org/licenses/.
 */
 
+#include <QDebug>
 #include <QMessageBox>
 #include <QStandardItemModel>
 #include <QStandardItem>
@@ -305,7 +306,8 @@ bool MainWindow::checkForMissingFiles()
     << "spritecategories.xml"
     << "spritedata.xml"
     << "tilebehaviors.xml"
-    << "tilesetnames.txt";
+    << "tilesetnames.txt"
+    << "environmentnames.txt";
 
     QList<int> missingFilesIds;
 

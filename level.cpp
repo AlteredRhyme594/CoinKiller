@@ -26,6 +26,7 @@
 #include <limits>
 #include <QMessageBox>
 #include <algorithm>
+#include <QInputDialog>
 
 Level::Level(Game *game, SarcFilesystem* archive, int area, QString lvlName)
 {
@@ -141,14 +142,16 @@ Level::Level(Game *game, SarcFilesystem* archive, int area, QString lvlName)
         quint8 destArea = header->read8();
         quint8 destEntr = header->read8();
         quint8 entrType = header->read8();
-        header->skip(4);
+        header->skip(3);
+        quint8 pathId = header->read8();
         quint16 settings = header->read16();
-        header->skip(2);
+        header->skip(1);
+        quint8 cpd = header->read8();
         quint8 entrUnk1 = header->read8();
         quint8 entrUnk2 = header->read8();
         header->skip(2);
 
-        Entrance* entr = new Entrance(to20(x), to20(y), cameraX, cameraY, id, destArea, destEntr, entrType, settings, entrUnk1, entrUnk2);
+        Entrance* entr = new Entrance(to20(x), to20(y), cameraX, cameraY, id, destArea, destEntr, entrType, pathId, settings, cpd, entrUnk1, entrUnk2);
         entr->setRect();
         entrances.append(entr);
     }
@@ -196,7 +199,8 @@ Level::Level(Game *game, SarcFilesystem* archive, int area, QString lvlName)
         header->skip(2);
         quint8 id = header->read8();
         quint8 boundingId = header->read8();
-        header->skip(6);
+        quint8 cameraMode = header->read8();
+        header->skip(5);
         quint8 multiplayerTracking = header->read8();
         quint8 progPathId = header->read8();
         quint8 musicId = header->read8();
@@ -205,7 +209,7 @@ Level::Level(Game *game, SarcFilesystem* archive, int area, QString lvlName)
         quint8 cameraFlags = header->read8();
         header->skip(2);
 
-        Zone* zone = new Zone(to20(x), to20(y), to20(width), to20(height), id, progPathId, musicId, multiplayerTracking, zoneUnk1, boundingId, backgroundId, cameraFlags);
+        Zone* zone = new Zone(to20(x), to20(y), to20(width), to20(height), id, progPathId, musicId, multiplayerTracking, zoneUnk1, boundingId, backgroundId, cameraMode, cameraFlags);
         zones.append(zone);
     }
 
@@ -626,9 +630,11 @@ qint8 Level::save()
         header->write8(entr->getEntrType());
         header->write8(0);
         header->write8(getNextZoneID(entr));
-        for (int i = 0; i < 2; i++) header->write8(0);
+        header->write8(0);
+        header->write8(entr->getPathId());
         header->write16(entr->getSettings());
-        for (int i = 0; i < 2; i++) header->write8(0);
+        header->write8(0);
+        header->write8(entr->getConnectedPipeExitDirection());
         header->write8(entr->getUnk1());
         header->write8(entr->getUnk2());
         for (int i = 0; i < 2; i++) header->write8(0);
@@ -674,7 +680,8 @@ qint8 Level::save()
         header->write16(0);
         header->write8(z->getid());
         header->write8(z->getBoundingId());
-        for (int j = 0; j < 6; j++) header->write8(0);
+        header->write8(z->getCameraMode());
+        for (int j = 0; j < 5; j++) header->write8(0);
         header->write8(z->getMultiplayerTracking());
         header->write8(z->getProgPathId());
         header->write8(z->getMusicId());
@@ -907,7 +914,7 @@ Entrance* Level::newEntrance(int x, int y)
             break;
         }
     }
-    return new Entrance(toNext16Compatible(x), toNext16Compatible(y), 0, 0, id, 0, 0, 0, 0, 0, 0);
+    return new Entrance(toNext16Compatible(x), toNext16Compatible(y), 0, 0, id, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 Zone* Level::newZone(int x, int y)
@@ -928,7 +935,7 @@ Zone* Level::newZone(int x, int y)
             break;
         }
     }
-    return new Zone(toNext16Compatible(x), toNext16Compatible(y), 400, 240, id, 0, 0, 0, 0, 0, 0, 0);
+    return new Zone(toNext16Compatible(x), toNext16Compatible(y), 400, 240, id, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 Location* Level::newLocation(int x, int y)

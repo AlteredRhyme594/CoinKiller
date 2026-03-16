@@ -132,6 +132,38 @@ void SetUnk2::redo() {
 }
 
 
+SetPathId::SetPathId(Entrance *entr, quint8 pathId) :
+    entr(entr),
+    newPathId(pathId),
+    oldPathId(entr->getPathId()) {
+    this->setText(QObject::tr("Set Entrance Path ID"));
+}
+
+void SetPathId::undo() {
+    this->entr->setPathId(oldPathId);
+}
+
+void SetPathId::redo() {
+    this->entr->setPathId(newPathId);
+}
+
+
+SetConnectedPipeExitDirection::SetConnectedPipeExitDirection(Entrance *entr, quint8 cpd) :
+    entr(entr),
+    newCPD(cpd),
+    oldCPD(entr->getConnectedPipeExitDirection()) {
+    this->setText(QObject::tr("Set Entrance Connected Pipe Exit Direction"));
+}
+
+void SetConnectedPipeExitDirection::undo() {
+    this->entr->setConnectedPipeExitDirection(oldCPD);
+}
+
+void SetConnectedPipeExitDirection::redo() {
+    this->entr->setConnectedPipeExitDirection(newCPD);
+}
+
+
 SetSettingsBit::SetSettingsBit(Entrance *entr, bool value, qint32 bit) :
     entr(entr),
     bitValue(value),

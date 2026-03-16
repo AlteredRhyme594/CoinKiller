@@ -368,7 +368,7 @@ void EditManager::CreateObject(quint32 x, quint32 y)
         if (selectAfterPlacement) {
             newObject = bgdatObj;
             interactMode = InteractionMode::Creation;
-            selectedObjects.append(bgdatObj);
+            // selectedObjects.append(bgdatObj);
         }
     }
     else if (drawType == ObjectType::SPRITE)
@@ -1125,7 +1125,8 @@ void EditManager::paste(int currX, int currY, int currW, int currH)
         }
         case 2: // Entrance
         {
-            Entrance* newEntr = new Entrance(params[3].toInt()+pOffsetX, params[4].toInt()+pOffsetY, params[7].toInt(), params[8].toInt(), params[1].toInt(), params[5].toInt(), params[6].toInt(), params[2].toInt(), params[9].toInt(), params[10].toInt(), params[11].toInt());
+            // TODO pathId and cpd
+            Entrance* newEntr = new Entrance(params[3].toInt()+pOffsetX, params[4].toInt()+pOffsetY, params[7].toInt(), params[8].toInt(), params[1].toInt(), params[5].toInt(), params[6].toInt(), params[2].toInt(), 0, params[9].toInt(), 0, params[10].toInt(), params[11].toInt());
             newEntr->setRect();
             undoStack->push(new Commands::LevelCmd::InsertEntrance(level, newEntr));
             selectedObjects.append(newEntr);
@@ -1133,7 +1134,16 @@ void EditManager::paste(int currX, int currY, int currW, int currH)
         }
         case 3: // Zone
         {
-            Zone* newZone = new Zone(params[1].toInt()+pOffsetX, params[2].toInt()+pOffsetY, params[3].toInt(), params[4].toInt(), params[5].toInt(), params[6].toInt(), params[7].toInt(), params[8].toInt(), params[9].toInt(), params[10].toInt(), params[11].toInt(), params[12].toInt());
+            // for compatibility with other versions
+            quint8 cameraMode = 0;
+            quint8 cameraFlags = 0;
+            if (params.size() >= 14)
+            {
+                cameraMode = params[12].toInt();
+                cameraFlags = params[13].toInt();
+            }
+
+            Zone* newZone = new Zone(params[1].toInt()+pOffsetX, params[2].toInt()+pOffsetY, params[3].toInt(), params[4].toInt(), params[5].toInt(), params[6].toInt(), params[7].toInt(), params[8].toInt(), params[9].toInt(), params[10].toInt(), params[11].toInt(), cameraMode, cameraFlags);
             undoStack->push(new Commands::LevelCmd::InsertZone(level, newZone));
             selectedObjects.append(newZone);
             break;
@@ -1276,6 +1286,8 @@ void EditManager::setObject(int selObject, int selTileset)
     this->selTileset = selTileset;
 
     swapSelectedBgdatObjects();
+
+    emit selectedBgdatObjectChanged(this->selObject, this->selTileset);
 
     emit updateLevelView();
 }

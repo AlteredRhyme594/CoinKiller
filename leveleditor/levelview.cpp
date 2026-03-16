@@ -354,7 +354,7 @@ void LevelView::paint(QPainter& painter, QRect rect, float zoomLvl, bool selecti
         }
 
         // Render Movement Controller - Back & Forth Indicators
-        static const QSet<int> supportsMovBackForth{28, 60, 101, 204, 293};
+        static const QSet<int> supportsMovBackForth{28, 60, 101, 204, 293, /* custom */ 330, 331};
         for (int i = 0; renderControllers && i < level->zones.size(); i++)
         {
             const Zone* zone = level->zones.at(i);

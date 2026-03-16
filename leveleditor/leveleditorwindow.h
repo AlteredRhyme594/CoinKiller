@@ -39,6 +39,7 @@
 #include "settingsmanager.h"
 #include "windowbase.h"
 #include "layermask.h"
+#include "quickpaintwidget.h"
 
 namespace Ui {
 class LevelEditorWindow;
@@ -134,6 +135,8 @@ private slots:
 
     void on_actionShowToolbox_toggled(bool checked);
 
+    void on_actionShowQuickPaint_toggled(bool checked);
+
     void on_actionShowHistory_toggled(bool checked);
 
     void updateDockedWidgetCheckboxes();
@@ -169,6 +172,7 @@ private:
     ProgressPathEditorWidget* progPathEditor = nullptr;
     SpriteIdWidget* spriteIds = nullptr;
     EventEditorWidget* eventEditor = nullptr;
+    QuickPaintWidget *quickPaint = nullptr;
 
     QComboBox* areaSelector;
 
@@ -203,6 +207,7 @@ private:
     QTabWidget* toolboxTabs;
 
     QDockWidget* minimapDock;
+    QDockWidget* quickPaintDock;
     QDockWidget* historyDock;
 
     QUndoStack* undoStack;

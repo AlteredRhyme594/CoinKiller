@@ -70,7 +70,7 @@ SetUnk1::SetUnk1(Zone *zone, quint32 value) :
     zone(zone),
     newValue(value),
     oldValue(zone->getUnk1()) {
-    this->setText(QObject::tr("Set Zone Unk1"));
+    this->setText(QObject::tr("Set Zone Environment (Unk1)"));
 }
 
 void SetUnk1::undo() {
@@ -111,6 +111,22 @@ void SetBackgroundId::undo() {
 
 void SetBackgroundId::redo() {
     zone->setBackgroundId(newId);
+}
+
+
+SetCameraMode::SetCameraMode(Zone *zone, quint8 mode) :
+    zone(zone),
+    newMode(mode),
+    oldMode(zone->getCameraMode()) {
+    this->setText(QObject::tr("Changed Camera Mode"));
+}
+
+void SetCameraMode::undo() {
+    zone->setCameraMode(oldMode);
+}
+
+void SetCameraMode::redo() {
+    zone->setCameraMode(newMode);
 }
 
 

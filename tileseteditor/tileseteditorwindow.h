@@ -36,6 +36,9 @@ public slots:
     void setSelTileData(QString text);
     void updateObjectEditor();
 
+    void updateObjSelectedTileItem(QString s);
+    void setObjSelectedTileItem(int itemVal);
+
 private slots:
     void on_hexLineEdit_textEdited(const QString &text);
 

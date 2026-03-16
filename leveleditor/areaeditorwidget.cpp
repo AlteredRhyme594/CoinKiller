@@ -20,6 +20,7 @@ AreaEditorWidget::AreaEditorWidget(Level *level, Game *game, QUndoStack *undoSta
     specialLevelFlags1.insert(5, tr("Credits"));
     specialLevelFlags1.insert(6, tr("Cannon Level"));
     specialLevelFlags1.insert(7, tr("Frozen Timer"));
+    specialLevelFlags1.insert(8, tr("Enemy Timer (Custom)"));
 
     specialLevelFlags2.insert(0, tr("Normal"));
     specialLevelFlags2.insert(1, tr("Ghost House"));

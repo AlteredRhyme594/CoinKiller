@@ -122,6 +122,12 @@ LevelEditorWindow::LevelEditorWindow(LevelManager* lvlMgr, int initialArea) :
     addDockWidget(Qt::LeftDockWidgetArea, toolboxDock);
     addDockWidget(Qt::LeftDockWidgetArea, minimapDock);
 
+    quickPaintDock = new QDockWidget(this);
+    quickPaintDock->setObjectName("quickPaintDock");
+    quickPaintDock->setWindowTitle(tr("Quick Paint"));
+
+    addDockWidget(Qt::RightDockWidgetArea, quickPaintDock);
+
     // Undo/Redo
     undoStack = new QUndoStack(this);
     connect(undoStack, &QUndoStack::indexChanged, this, &LevelEditorWindow::historyStateChanged);
@@ -159,7 +165,8 @@ LevelEditorWindow::LevelEditorWindow(LevelManager* lvlMgr, int initialArea) :
     updateDockedWidgetCheckboxes();
     connect(toolboxDock, &QDockWidget::visibilityChanged, this, &LevelEditorWindow::updateDockedWidgetCheckboxes);
     connect(minimapDock, &QDockWidget::visibilityChanged, this, &LevelEditorWindow::updateDockedWidgetCheckboxes);
-    connect(minimapDock, &QDockWidget::visibilityChanged, this, &LevelEditorWindow::updateDockedWidgetCheckboxes);
+
+    connect(quickPaintDock, &QDockWidget::visibilityChanged, this, &LevelEditorWindow::updateDockedWidgetCheckboxes);
 
     loadArea(initialArea, false, true);
 
@@ -219,6 +226,7 @@ void LevelEditorWindow::loadSettings() {
     undoStack->setUndoLimit(static_cast<int>(settings->getLEUndoLimit()));
     levelView->editManagerPtr()->toggleSelectAfterPlacement(settings->getLESelectOnPlace());
     ui->statusbar->setHidden(!settings->getLEShowStatusbar());
+    quickPaint->quickPaintView->setBackgroundColor(settings->getLEWindowColor());
 }
 
 void LevelEditorWindow::historyStateChanged(int index)
@@ -841,6 +849,16 @@ void LevelEditorWindow::loadArea(int id, bool closeLevel, bool init)
     connect(miniMap, &LevelMiniMap::scrollTo, this, &LevelEditorWindow::scrollTo);
     minimapDock->setWidget(miniMap);
 
+    quickPaint = new QuickPaintWidget(this, level);
+    quickPaintDock->setWidget(quickPaint);
+
+    quickPaint->quickPaintView->setMinimumSize(96*20, 96*20);
+    quickPaint->quickPaintView->setMaximumSize(96*20, 96*20);
+
+    connect(quickPaint->quickPaintView, &QuickPaintView::scrollTo, quickPaint, &QuickPaintWidget::scrollTo);
+    connect(levelView->editManagerPtr(), &EditManager::drawTypeChanged, quickPaint->quickPaintView, &QuickPaintView::onDrawTypeChanged);
+    connect(levelView->editManagerPtr(), &EditManager::selectedBgdatObjectChanged, quickPaint->quickPaintView, &QuickPaintView::onSelectedBgdatObjectChanged);
+
     update();
 
     toolboxTabs->blockSignals(false);
@@ -949,6 +967,11 @@ void LevelEditorWindow::on_actionShowMinimap_toggled(bool checked)
     minimapDock->setHidden(!checked);
 }
 
+void LevelEditorWindow::on_actionShowQuickPaint_toggled(bool checked)
+{
+    quickPaintDock->setHidden(!checked);
+}
+
 void LevelEditorWindow::on_actionShowHistory_toggled(bool checked)
 {
     historyDock->setHidden(!checked);
@@ -958,6 +981,7 @@ void LevelEditorWindow::updateDockedWidgetCheckboxes()
 {
     ui->actionShowToolbox->setChecked(!toolboxDock->isHidden());
     ui->actionShowMinimap->setChecked(!minimapDock->isHidden());
+    ui->actionShowQuickPaint->setChecked(!quickPaintDock->isHidden());
     ui->actionShowHistory->setChecked(!historyDock->isHidden());
 }
 

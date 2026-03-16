@@ -140,15 +140,17 @@ class Entrance: public Object
 public:
     Entrance() {}
     Entrance(Entrance* entr);
-    Entrance(qint32 x, qint32 y, qint16 cameraX, qint16 cameraY, quint8 id, quint8 destArea, quint8 destEntr, quint8 entrType, quint16 settings, quint8 unk1, quint8 unk2);
+    Entrance(qint32 x, qint32 y, qint16 cameraX, qint16 cameraY, quint8 id, quint8 destArea, quint8 destEntr, quint8 entrType, quint8 pathId, quint16 settings, quint8 cpd, quint8 unk1, quint8 unk2);
     ObjectType getType() const { return ObjectType::ENTRANCE; }
     bool isResizable() const { return false; }
-    QString toString(qint32 xOffset, qint32 yOffset) const;
+    QString toString(qint32 xOffset, qint32 yOffset) const;     // TODO pathId and connectedPipeDirection
     quint8 getid() const { return id; }
     quint8 getDestArea() const { return destArea; }
     quint8 getDestEntr() const { return destEntr; }
     quint8 getEntrType() const { return entrType; }
+    quint8 getPathId() const { return pathId; }
     quint16 getSettings() const { return settings; }
+    quint8 getConnectedPipeExitDirection() const { return connectedPipeExitDirection; }
     qint16 getCameraX() const { return cameraX; }
     qint16 getCameraY() const { return cameraY; }
     quint8 getUnk1() const { return unk1; }
@@ -159,8 +161,10 @@ public:
     void setDestArea(quint8 destArea) { this->destArea = destArea; }
     void setCameraX(qint16 cameraX) { this->cameraX = cameraX; }
     void setCameraY(qint16 cameraY) { this->cameraY = cameraY; }
+    void setPathId(quint8 pathId) { this->pathId = pathId; }
     void setSettings(quint16 settings) { this->settings = settings; }
     void setSettingsBit(bool value, qint32 bit) { settings ^= (-(qint32)value ^ settings) & (1 << bit); }
+    void setConnectedPipeExitDirection(quint8 connectedPipeDirection) { this->connectedPipeExitDirection = connectedPipeDirection; }
     void setUnk1(quint8 unk1) { this->unk1 = unk1; }
     void setUnk2(quint8 unk2) { this->unk2 = unk2; }
     void setRect();
@@ -171,7 +175,9 @@ protected:
     quint8 destArea;
     quint8 destEntr;
     quint8 entrType;
+    quint8 pathId;                  // 0xF (based on NSMBWii)
     quint16 settings;
+    quint8 connectedPipeExitDirection;  // 0x13 (based on NSMBWii)
     quint8 unk1;
     quint8 unk2;
 };
@@ -235,7 +241,7 @@ class Zone: public Object
 public:
     Zone() {}
     Zone(Zone* zone);
-    Zone(qint32 x, qint32 y, qint32 width, qint32 height, quint8 id, quint8 progPathId, quint8 musicId, quint8 multiplayerTracking, quint16 unk1, quint8 boundingId, quint8 backgroundId, quint8 cameraFlags);
+    Zone(qint32 x, qint32 y, qint32 width, qint32 height, quint8 id, quint8 progPathId, quint8 musicId, quint8 multiplayerTracking, quint16 unk1, quint8 boundingId, quint8 backgroundId, quint8 cameraMode, quint8 cameraFlags);
     bool clickDetection(qint32 xcheck, qint32 ycheck);
     bool clickDetection(QRect rect);
     ObjectType getType() const { return ObjectType::ZONE; }
@@ -248,6 +254,7 @@ public:
     quint8 getProgPathId() const { return progPathId; }
     quint8 getMusicId() const { return musicId; }
     quint8 getBackgroundId() const { return backgroundId; }
+    quint8 getCameraMode() const { return cameraMode; }
     quint8 getCameraFlags() const { return cameraFlags; }
     void setUnk1(quint32 unk1) { this->unk1 = unk1; }
     void setID(quint8 id) { this->id = id; }
@@ -256,6 +263,7 @@ public:
     void setProgPathId(quint8 progPathId) { this->progPathId = progPathId; }
     void setMusicID(quint8 musicId) { this->musicId = musicId; }
     void setBackgroundId(quint8 backgroundId) { this->backgroundId = backgroundId; }
+    void setCameraMode(quint8 mode) { this->cameraMode = mode; }
     void setCameraFlags(quint8 cameraFlags) { this->cameraFlags = cameraFlags; }
 
 protected:
@@ -266,6 +274,7 @@ protected:
     quint8 progPathId;
     quint8 musicId;
     quint8 backgroundId;
+    quint8 cameraMode;
     quint8 cameraFlags;
 };
 

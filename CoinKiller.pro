@@ -78,6 +78,8 @@ SOURCES += \
     leveleditor/locationeditorwidget.cpp \
     leveleditor/patheditorwidget.cpp \
     leveleditor/progresspatheditorwidget.cpp \
+    leveleditor/quickpaintview.cpp \
+    leveleditor/quickpaintwidget.cpp \
     leveleditor/settingsdialog.cpp \
     leveleditor/spriteeditorwidget.cpp \
     leveleditor/spriteidswidget.cpp \
@@ -138,6 +140,8 @@ HEADERS += \
     leveleditor/locationeditorwidget.h \
     leveleditor/patheditorwidget.h \
     leveleditor/progresspatheditorwidget.h \
+    leveleditor/quickpaintview.h \
+    leveleditor/quickpaintwidget.h \
     leveleditor/settingsdialog.h \
     leveleditor/spriteeditorwidget.h \
     leveleditor/spriteidswidget.h \

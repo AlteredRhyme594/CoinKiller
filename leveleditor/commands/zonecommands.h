@@ -112,6 +112,21 @@ private:
 };
 
 
+class SetCameraMode : public QUndoCommand
+{
+public:
+    SetCameraMode(Zone *zone, quint8 mode);
+
+    void undo() override;
+    void redo() override;
+
+private:
+    Zone *const zone;
+    const quint8 newMode;
+    const quint8 oldMode;
+};
+
+
 class SetCameraFlags : public QUndoCommand
 {
 public:

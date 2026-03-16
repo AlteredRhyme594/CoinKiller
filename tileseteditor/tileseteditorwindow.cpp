@@ -76,6 +76,9 @@ TilesetEditorWindow::TilesetEditorWindow(WindowBase *parent, Tileset *tileset) :
     ui->objectEditor->insertWidget(1, objectEditor);
     ui->actionShowObjectMarkers->setChecked(true);
 
+    connect(objectEditor, SIGNAL(updateSelTileLabel(QString)), this, SLOT(updateObjSelectedTileItem(QString)));
+    connect(ui->oItemSpinBox, SIGNAL(valueChanged(int)), this, SLOT(setObjSelectedTileItem(int)));
+
     ui->objectsListView->setIconSize(QSize(140,140));
     ui->objectsListView->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     setupObjectsModel(false);
@@ -87,6 +90,47 @@ TilesetEditorWindow::TilesetEditorWindow(WindowBase *parent, Tileset *tileset) :
     hideVertEdits(true);
 
     editStatus->setText(tr("Ready!"));
+}
+
+void TilesetEditorWindow::updateObjSelectedTileItem(QString s)
+{
+    int objNbr = objectEditor->getSelectedObjN();
+    int selX = objectEditor->getSelectedObjX();
+    int selY = objectEditor->getSelectedObjY();
+
+    if (objNbr != -1 && selX != -1 && selY != -1) {
+        int itemVal = (tileset->getData(objNbr, selX, selY, 2) & 120) >> 3;
+        qDebug() << itemVal;
+        qDebug() << "Label: " << s;
+        qDebug() << (tileset->getData(objNbr, selX, selY, 1));
+        qDebug() << (tileset->getData(objNbr, selX, selY, 2));
+        qDebug() << "Item: " << ((tileset->getData(objNbr, selX, selY, 2) & 120) >> 3);
+
+        ui->oItemSpinBox->setEnabled(true);
+        ui->oItemSpinBox->blockSignals(true);
+        ui->oItemSpinBox->setValue(itemVal);
+        ui->oItemSpinBox->blockSignals(false);
+    } else {
+        ui->oItemSpinBox->setDisabled(true);
+    }
+}
+
+void TilesetEditorWindow::setObjSelectedTileItem(int itemVal) {
+    int objNbr = objectEditor->getSelectedObjN();
+    int selX = objectEditor->getSelectedObjX();
+    int selY = objectEditor->getSelectedObjY();
+
+    if (objNbr != -1 && selX != -1 && selY != -1) {
+        quint8 data = tileset->getData(objNbr, selX, selY, 2);
+
+        quint8 newdata = (data & 135) + (static_cast<quint8>(itemVal) << 3);
+        qDebug() << "Setting new value: " << itemVal << "|" << (static_cast<quint8>(itemVal) << 3);
+        tileset->setData(objNbr, selX, selY, 2, newdata);
+
+        qDebug() << "Result:";
+        qDebug() << (tileset->getData(objNbr, selX, selY, 2));
+        qDebug() << "Item: " << ((tileset->getData(objNbr, selX, selY, 2) & 120) >> 3);
+    }
 }
 
 TilesetEditorWindow::~TilesetEditorWindow()
@@ -165,7 +209,7 @@ void TilesetEditorWindow::updateSelectedTile(int tileTL, int tileBR)
     if (selectedTileTL != selectedTileBR)
         tileID.append("-" + QString::number(selectedTileBR));
 
-    ui->selectedTileLabel->setText(tr("Selected Tile: (%1, %2) ID : (%3)").arg(xpos).arg(ypos).arg(tileID));
+    ui->selectedTileLabel->setText(tr("Selected Tile: (%1, %2) ID : (0x%3)").arg(xpos).arg(ypos).arg(tileID.toInt(), 0, 16));
 
     updateHex();
     updateBehavior();

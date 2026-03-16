@@ -35,6 +35,10 @@ private:
     QSpinBox *unk2;
     QCheckBox *enterable;
     QCheckBox *returnToWM;
+    QCheckBox *connectedPipe;
+    QSpinBox *pathId;
+    QCheckBox *connectedPipeReversed;
+    QComboBox *connectedPipeExitDirection;
 
     QList<Entrance*> *entrances;
     Entrance* editEntrance;
@@ -65,6 +69,10 @@ private slots:
     void handleUnk2Change(int unk2Val);
     void handleEnterableChange(bool enterableVal);
     void handleReturnToWMChange(bool returnToWMVal);
+    void handlePathIdChange(int pathId);
+    void handleConnectedPipeChange(bool connectedPipe);
+    void handleConnectedPipeReversedChange(bool connectedPipeReversed);
+    void handleConnectedPipeExitDirectionChange(int direction);
 };
 
 #endif // ENTRANCEEDITOR_H

@@ -403,7 +403,7 @@ void Sprite::setRect()
     case 34: // Sledge Bro
         width = 43;
         height = 53;
-        offsetx = 44;
+        offsetx = -12;
         offsety = 7;
         break;
     case 35: // Lava Bubble
@@ -1727,7 +1727,7 @@ void Sprite::setRect()
         offsetx = getNybble(7);
         offsety = offsetx;
         break;
-    case 189: case 190: case 191: case 192: case 193: case 282: // Rect Blocks
+    case 189: case 190: case 191: case 192: case 193: case 282: /*custom*/ case 348: case 349: // Rect Blocks
         {
             width = getNybble(17)*20+20;
             if (width == 20) width = 40;
@@ -2962,6 +2962,56 @@ void Sprite::setRect()
         offsetx = -23;
         offsety = -23;
         break;
+
+    // custom
+
+    case 333: // Skewer - Down
+        width = 82;
+        height = 557;
+        offsety = -537;
+        renderOffsetH = 320;
+        break;
+    case 334: // Skewer - Up
+        width = 82;
+        height = 557;
+        renderOffsetH = 320;
+        renderOffsetY = -320;
+        break;
+    case 350: // Door Frame
+        width = 40;
+        height = 60;
+        break;
+    case 352: // Up-Facing Bullet Bill Launcher
+        width = 20;
+        height = (2 + getNybble(10)) * 20;
+        if (getNybble(4) == 0)
+            offsety = -height+20;
+        break;
+    case 353: // Rising/Lowering Bullet Bill Launcher
+        width = 20;
+        height = (2 + qMax(getNybble(10), getNybble(11))) * 20;
+        if (getNybble(4) == 0)
+            offsety = -height+20;
+        break;
+    case 354: // Grounded Grinder
+        if (getNybble(9) & 1) {
+            width = 86;
+            height = 86;
+            offsetx = -23;
+            offsety = -23;
+        } else {
+            width = 49;
+            height = 49;
+            offsetx = -6;
+            offsety = -6;
+        }
+        break;
+    case 360: // Long Flip Block
+        width = 60;
+        height = 20;
+        offsetx = -20;
+        break;
+
     default:
         width = 20;
         height = 20;
@@ -3073,7 +3123,7 @@ bool Sprite::clickDetection(QRect rect)
 
 
 // Entrance
-Entrance::Entrance(qint32 x, qint32 y, qint16 cameraX, qint16 cameraY, quint8 id, quint8 destArea, quint8 destEntr, quint8 entrType, quint16 settings, quint8 unk1, quint8 unk2)
+Entrance::Entrance(qint32 x, qint32 y, qint16 cameraX, qint16 cameraY, quint8 id, quint8 destArea, quint8 destEntr, quint8 entrType, quint8 pathId, quint16 settings, quint8 cpd, quint8 unk1, quint8 unk2)
 {
     this->x = x;
     this->y = y;
@@ -3083,7 +3133,9 @@ Entrance::Entrance(qint32 x, qint32 y, qint16 cameraX, qint16 cameraY, quint8 id
     this->destArea = destArea;
     this->destEntr = destEntr;
     this->entrType = entrType;
+    this->pathId = pathId;
     this->settings = settings;
+    this->connectedPipeExitDirection = cpd;
     this->unk1 = unk1;
     this->unk2 = unk2;
 }
@@ -3098,7 +3150,9 @@ Entrance::Entrance(Entrance *entr)
     destArea = entr->getDestArea();
     destEntr = entr->getDestEntr();
     entrType = entr->getEntrType();
+    pathId = entr->getPathId();
     settings = entr->getSettings();
+    connectedPipeExitDirection = entr->getConnectedPipeExitDirection();
     unk1 = entr->getUnk1();
     unk2 = entr->getUnk2();
     setRect();
@@ -3144,7 +3198,7 @@ QString Entrance::toString(qint32 xOffset, qint32 yOffset) const
 
 
 // Zone
-Zone::Zone(qint32 x, qint32 y, qint32 width, qint32 height, quint8 id, quint8 progPathId, quint8 musicId, quint8 multiplayerTracking, quint16 unk1, quint8 boundingId, quint8 backgroundId, quint8 cameraFlags)
+Zone::Zone(qint32 x, qint32 y, qint32 width, qint32 height, quint8 id, quint8 progPathId, quint8 musicId, quint8 multiplayerTracking, quint16 unk1, quint8 boundingId, quint8 backgroundId, quint8 cameraMode, quint8 cameraFlags)
 {
     this->x = x;
     this->y = y;
@@ -3157,6 +3211,7 @@ Zone::Zone(qint32 x, qint32 y, qint32 width, qint32 height, quint8 id, quint8 pr
     this->unk1 = unk1;
     this->boundingId = boundingId;
     this->backgroundId = backgroundId;
+    this->cameraMode = cameraMode;
     this->cameraFlags = cameraFlags;
 }
 
@@ -3173,6 +3228,7 @@ Zone::Zone(Zone *zone)
     unk1 = zone->getUnk1();
     boundingId = zone->getBoundingId();
     backgroundId = zone->getBackgroundId();
+    cameraMode = zone->getCameraMode();
     cameraFlags = zone->getCameraFlags();
 }
 
@@ -3188,8 +3244,9 @@ bool Zone::clickDetection(QRect rect)
 
 QString Zone::toString(qint32 xOffset, qint32 yOffset) const
 {
-    return QString("3:%1:%2:%3:%4:%5:%6:%7:%8:%9:%10:%11:%12").arg(x+xOffset).arg(y+yOffset)
-        .arg(width).arg(height).arg(id).arg(progPathId).arg(musicId).arg(multiplayerTracking).arg(unk1).arg(boundingId).arg(backgroundId).arg(cameraFlags);
+    return QString("3:%1:%2:%3:%4:%5:%6:%7:%8:%9:%10:%11:%12:%13").arg(x+xOffset).arg(y+yOffset)
+        .arg(width).arg(height).arg(id).arg(progPathId).arg(musicId).arg(multiplayerTracking).arg(unk1).arg(boundingId).arg(backgroundId)
+        .arg(cameraMode).arg(cameraFlags);
 }
 
 ZoneBounding::ZoneBounding(quint16 id, quint32 primaryUpperBound, qint32 primaryLowerBound, qint32 secondaryUpperBound, qint32 secondaryLowerBound, quint16 upScrolling)

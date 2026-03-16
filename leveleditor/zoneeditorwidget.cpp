@@ -34,6 +34,11 @@ ZoneEditorWidget::ZoneEditorWidget(QList<Zone*> *zones, QList<ZoneBackground*> *
     multiplayerTrackings.insert(7, tr("Up and Left"));
     multiplayerTrackings.insert(8, tr("Right and Right"));
     loadMusicIDs();
+    loadEnvironmentNames();
+
+    cameraModes.insert(0, tr("Normal"));
+    cameraModes.insert(1, tr("Y Tracking Only"));
+    cameraModes.insert(6, tr("X Tracking Only"));
 
     zoneList = new QListWidget();
     zoneList->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -70,9 +75,14 @@ ZoneEditorWidget::ZoneEditorWidget(QList<Zone*> *zones, QList<ZoneBackground*> *
     musicId->setSizeAdjustPolicy(QComboBox::SizeAdjustPolicy::AdjustToMinimumContentsLengthWithIcon);
     connect(musicId, &QComboBox::currentTextChanged, this, &ZoneEditorWidget::handleMusicIDChange);
 
-    unk1 = new QSpinBox();
-    unk1->setRange(0, 255);
-    connect(unk1, &QSpinBox::valueChanged, this, &ZoneEditorWidget::handleUnk1Change);
+    // unk1 = new QSpinBox();
+    // unk1->setRange(0, 255);
+    // connect(unk1, &QSpinBox::valueChanged, this, &ZoneEditorWidget::handleUnk1Change);
+    unk1 = new QComboBox();
+    for (auto iter = environmentNames.begin(), end = environmentNames.end(); iter != end; iter++) {
+        unk1->addItem(iter->second);
+    }
+    connect(unk1, &QComboBox::currentTextChanged, this, &ZoneEditorWidget::handleUnk1Change);
 
     boundingId = new QSpinBox();
     boundingId->setRange(0, 255);
@@ -119,6 +129,13 @@ ZoneEditorWidget::ZoneEditorWidget(QList<Zone*> *zones, QList<ZoneBackground*> *
     backgroundWidget = new ZoneBackgroundWidget(bgs, undoStack, level);
     connect(backgroundWidget, &ZoneBackgroundWidget::selectedBackgroundChanged, this, &ZoneEditorWidget::handleBackgroundIDChange);
 
+    cameraMode = new QComboBox();
+    cameraMode->setToolTip(tr("Changes how the camera follows the players.\n"
+                              "\"Y Tracking Only\": The camera will only move vertically and will be centered horizontally in the Zone .\n"
+                              "\"X Tracking Only\": The camera will only move horizontally and will be aligned to the bottom edge of the Zone."));
+    cameraMode->addItems(cameraModes.values());
+    connect(cameraMode, &QComboBox::currentTextChanged, this, &ZoneEditorWidget::handleCameraModeChange);
+
     QVBoxLayout* layout = new QVBoxLayout();
     setLayout(layout);
 
@@ -146,7 +163,8 @@ ZoneEditorWidget::ZoneEditorWidget(QList<Zone*> *zones, QList<ZoneBackground*> *
     settingsLayout->addWidget(new QLabel(tr("Progress Path ID:")), 3, 0, 1, 1, Qt::AlignRight);
     settingsLayout->addWidget(progPathId, 3, 1, 1, 2);
 
-    settingsLayout->addWidget(new QLabel(tr("Unknown 1:")), 4, 0, 1, 1, Qt::AlignRight);
+    // settingsLayout->addWidget(new QLabel(tr("Unknown 1:")), 4, 0, 1, 1, Qt::AlignRight);
+    settingsLayout->addWidget(new QLabel(tr("Environment:")), 4, 0, 1, 1, Qt::AlignRight);
     settingsLayout->addWidget(unk1, 4, 1, 1, 2);
 
     settingsLayout->addWidget(new QLabel(tr("Bounding ID:")), 5, 0, 1, 1, Qt::AlignRight);
@@ -157,7 +175,10 @@ ZoneEditorWidget::ZoneEditorWidget(QList<Zone*> *zones, QList<ZoneBackground*> *
     settingsLayout->addWidget(backgroundId, 6, 1);
     settingsLayout->addWidget(editBackground, 6, 2);
 
-    settingsLayout->addWidget(new QLabel(tr("Camera Flags:")), 7, 0, 1, 1, Qt::AlignCenter);
+    settingsLayout->addWidget(new QLabel(tr("Camera Mode:")), 7, 0, 1, 1, Qt::AlignRight);
+    settingsLayout->addWidget(cameraMode, 7, 1, 1, 2);
+
+    settingsLayout->addWidget(new QLabel(tr("Camera Flags:")), 8, 0, 1, 1, Qt::AlignCenter);
 
     QGridLayout* cameraFlagsLayout = new QGridLayout();
     cameraFlagsLayout->setContentsMargins(5, 5, 5, 5);
@@ -168,7 +189,7 @@ ZoneEditorWidget::ZoneEditorWidget(QList<Zone*> *zones, QList<ZoneBackground*> *
     cameraFlagsLayout->addWidget(camFlag4, 3, 0);
 
     cameraFlagGroup->setLayout(cameraFlagsLayout);
-    settingsLayout->addWidget(cameraFlagGroup, 7, 1, 1, 2);
+    settingsLayout->addWidget(cameraFlagGroup, 8, 1, 1, 2);
 
     settingsGroup->setLayout(settingsLayout);
 
@@ -194,6 +215,10 @@ void ZoneEditorWidget::changeEvent(QEvent* event)
         loadMusicIDs();
         for (auto iter = musicIds.begin(), end = musicIds.end(); iter != end; iter++) {
             musicId->addItem(iter->second);
+        }
+        loadEnvironmentNames();
+        for (auto iter = environmentNames.begin(), end = environmentNames.end(); iter != end; iter++) {
+            unk1->addItem(iter->second);
         }
         updateEditor();
     }
@@ -238,6 +263,30 @@ void ZoneEditorWidget::loadMusicIDs()
         QStringList parts = in.readLine().split(":");
         if (parts.count() == 2)
             musicIds.insert(i, qMakePair(parts[0].toInt(), parts[1]));
+
+        i++;
+    }
+
+    file.close();
+}
+
+void ZoneEditorWidget::loadEnvironmentNames()
+{
+    QFile file(SettingsManager::getInstance()->getFilePath("environmentnames.txt"));
+    if(!file.open(QIODevice::ReadOnly))
+        return;
+
+    QTextStream in(&file);
+    in.setEncoding(QStringConverter::Utf8);
+    int i = 1;
+
+    environmentNames.clear();
+    environmentNames.insert(0, qMakePair(0, tr("Use Zone Background")));
+    while(!in.atEnd())
+    {
+        QStringList parts = in.readLine().split(":");
+        if (parts.count() == 2)
+            environmentNames.insert(i, qMakePair(parts[0].toInt(), parts[1]));
 
         i++;
     }
@@ -301,13 +350,20 @@ void ZoneEditorWidget::updateInfo()
 
     multiplayerTracking->setCurrentText(multiplayerTrackings.value(editZone->getMultiplayerTracking()));
     progPathId->setValue(editZone->getProgPathId());
-    unk1->setValue(editZone->getUnk1());
+    // unk1->setValue(editZone->getUnk1());
+    for (auto iter = environmentNames.begin(), end = environmentNames.end(); iter != end; iter++) {
+        if (iter->first == editZone->getUnk1()) {
+            unk1->setCurrentText((iter->second));
+        }
+    }
+
     boundingId->setDisabled(true);
     boundingId->setStyleSheet("color: gray");
     boundingId->setValue(editZone->getBoundingId());
     backgroundId->setDisabled(true);
     backgroundId->setStyleSheet("color: gray");
     backgroundId->setValue(editZone->getBackgroundId());
+    cameraMode->setCurrentText(cameraModes.value(editZone->getCameraMode()));
     camFlag1->setChecked(editZone->getCameraFlags() & 1);
     camFlag2->setChecked(editZone->getCameraFlags() & 2);
     camFlag3->setChecked(editZone->getCameraFlags() & 4);
@@ -359,10 +415,18 @@ void ZoneEditorWidget::handleMultiPlayerTrackingChange(QString text)
     undoStack->push(new Commands::ZoneCmd::SetMultiplayerTracking(editZone, multiplayerTrackings.key(text, 0)));
 }
 
-void ZoneEditorWidget::handleUnk1Change(int unk1)
+void ZoneEditorWidget::handleUnk1Change(QString text)
 {
     if (!handleChanges) return;
-    undoStack->push(new Commands::ZoneCmd::SetUnk1(editZone, unk1));
+    // undoStack->push(new Commands::ZoneCmd::SetUnk1(editZone, unk1));
+    int env = 0;
+    for (auto iter = environmentNames.begin(), end = environmentNames.end(); iter != end; iter++) {
+        if (iter->second == text) {
+            env = iter->first;
+            break;
+        }
+    }
+    undoStack->push(new Commands::ZoneCmd::SetUnk1(editZone, env));
 }
 
 void ZoneEditorWidget::handleCameraFlagsChange(bool checked)
@@ -424,6 +488,11 @@ void ZoneEditorWidget::handleEditBackgroundClicked()
     backgroundWidget->exec();
 }
 
+void ZoneEditorWidget::handleCameraModeChange(QString text)
+{
+    if (!handleChanges) return;
+    undoStack->push(new Commands::ZoneCmd::SetCameraMode(editZone, cameraModes.key(text, 0)));
+}
 
 // Zone Background Widget
 ZoneBackgroundWidget::ZoneBackgroundWidget(QList<ZoneBackground*> *backgrounds, QUndoStack *undoStack, Level *level, QWidget *parent) :
