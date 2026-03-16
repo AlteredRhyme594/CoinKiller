@@ -790,6 +790,50 @@ SpriteRenderer::SpriteRenderer(const Sprite *spr, Tileset *tilesets[])
     case 322: // Big Grinder
         ret = new NormalImageRenderer(spr, "big_grinder.png");
         break;
+
+    // custom
+    case 327: // Event Controller - Random
+        ret = new FlagRenderer(spr);
+        break;
+    case 330: // Movement-controlled Gold Block
+        ret = new MovementSpriteRenderer(spr, "gold_block.png");
+        break;
+    case 331: // Movement-controlled Note Block
+        ret = new MovementSpriteRenderer(spr, "note_block.png");
+        break;
+    case 332: // Block Roulette Switch
+        ret = new NormalImageRenderer(spr, "block_roulette_switch.png");
+        break;
+    case 333: // Skewer - Down
+        ret = new SkewerRenderer(spr);
+        break;
+    case 334: // Skewer - Up
+        ret = new SkewerRenderer(spr);
+        break;
+    case 347: // Rotation-controlled Tile
+        ret = new TileRenderer(spr, tilesets);
+        break;
+    case 348: // Rectangle Lift - Overworld
+        ret = new RecLiftRenderer(spr, "nohara_rectangle_lift/");
+        break;
+    case 349: // Rectangle Lift - Underground
+        ret = new RecLiftRenderer(spr, "chika_rectangle_lift/");
+        break;
+    case 350: // Door Frame
+        ret = new DoorFrameRenderer(spr);
+        break;
+    case 352: // Up-Facing Bullet Bill Blaster
+        ret = new BulletBillLauncherUpRenderer(spr);
+        break;
+    case 353: // Rising/Lowering Bullet Bill Blaster
+        ret = new RisingLoweringBulletBillLauncherRenderer(spr);
+        break;
+    case 354: // Grounded Grinder
+        ret = new NormalImageRenderer(spr, "grinder.png");
+        break;
+    case 359: // Flip Block
+        ret = new FlipBlockRenderer(spr);
+        break;
     default:
         ret = new RoundedRectRenderer(spr, QString("%1").arg(spr->getid()), QColor(0,90,150,150));
         break;
@@ -1507,7 +1551,7 @@ void RedCoinRenderer::render(QPainter *painter, QRect *drawrect)
     img->render(painter, drawrect);
 }
 
-// Sprite 63/64: Skewer
+// Sprite 63/64: Skewer + 333/334
 SkewerRenderer::SkewerRenderer(const Sprite *spr)
 {
     this->spr = spr;
@@ -1521,6 +1565,7 @@ void SkewerRenderer::render(QPainter *painter, QRect *)
     int endYOffset = 0;
     int imgXOffset = 0;
     int imgYOffset = 0;
+    bool direction = false;
     QString img;
     if (spr->getid() == 63 || spr->getid() == 64)
     {
@@ -1529,18 +1574,18 @@ void SkewerRenderer::render(QPainter *painter, QRect *)
         endYOffset = spr->getheight()/2;
         switch (spr->getNybble(6))
         {
-            case 1:
-                endXOffset = -140;
-                break;
-            case 2:
-                endXOffset = -280;
-                break;
-            case 3:
-                endXOffset = -200;
-                break;
-            default:
-                endXOffset = -320;
-                break;
+        case 1:
+            endXOffset = -140;
+            break;
+        case 2:
+            endXOffset = -280;
+            break;
+        case 3:
+            endXOffset = -200;
+            break;
+        default:
+            endXOffset = -320;
+            break;
         }
     }
     if (spr->getid() == 64)
@@ -1549,7 +1594,39 @@ void SkewerRenderer::render(QPainter *painter, QRect *)
         endXOffset = abs(endXOffset) + 20;
         imgXOffset = -spr->getwidth() + 20;
     }
-    MovIndicatorRenderer track(spr->getx()+initialXOffset, spr->gety()+initialYOffset, spr->getx()+endXOffset, spr->gety()+endYOffset, false, QColor(244, 250, 255));
+
+    if (spr->getid() == 333 || spr->getid() == 334)
+    {
+        img = "skewer_down.png";
+        initialXOffset = spr->getwidth()/2;
+        endXOffset = spr->getwidth()/2;
+        imgYOffset = -537;
+        initialYOffset = 20;
+        direction = true;
+        switch (spr->getNybble(6))
+        {
+        case 1:
+            endYOffset = 160;
+            break;
+        case 2:
+            endYOffset = 300;
+            break;
+        case 3:
+            endYOffset = 220;
+            break;
+        default:
+            endYOffset = 340;
+            break;
+        }
+    }
+    if (spr->getid() == 334)
+    {
+        img = "skewer_up.png";
+        initialYOffset = 20;
+        endYOffset = initialYOffset - endYOffset;
+        imgYOffset = -spr->getheight() + 557;
+    }
+    MovIndicatorRenderer track(spr->getx()+initialXOffset, spr->gety()+initialYOffset, spr->getx()+endXOffset, spr->gety()+endYOffset, direction, QColor(244, 250, 255));
     QPixmap image(ImageCache::getInstance()->get(SpriteImg, img));
     track.render(painter);
     painter->drawPixmap(QRect(spr->getx() + imgXOffset, spr->gety() + imgYOffset, spr->getwidth(), spr->getheight()), image);
@@ -1675,11 +1752,17 @@ void FlagRenderer::render(QPainter *painter, QRect *drawrect)
         painter->setFont(QFont("Arial", 7, QFont::Normal));
         painter->drawText(textRect, QString("Mch"), Qt::AlignLeft | Qt::AlignBottom);
     }
-    else // Onscreen
+    else if(spr->getid() == 88)// Onscreen
     {
         painter->drawText(textRect, "F", Qt::AlignLeft | Qt::AlignTop);
         painter->setFont(QFont("Arial", 7, QFont::Normal));
         painter->drawText(textRect, QString("Ons"), Qt::AlignLeft | Qt::AlignBottom);
+    }
+    else // Random
+    {
+        painter->drawText(textRect, "F", Qt::AlignLeft | Qt::AlignTop);
+        painter->setFont(QFont("Arial", 7, QFont::Normal));
+        painter->drawText(textRect, QString("Rnd"), Qt::AlignLeft | Qt::AlignBottom);
     }
 
     painter->setPen(Qt::NoPen);
@@ -4338,6 +4421,197 @@ void PathLiftRenderer::render(QPainter *painter, QRect *)
     for (int i = 20; i < spr->getwidth()-43; i += 20)
         painter->drawPixmap(QRect(spr->getx()+spr->getOffsetX()+i+3, spr->gety(), 20, 22), ImageCache::getInstance()->get(SpriteImg, "lift_platform/m.png"));
 }
+
+/* custom */
+
+TileRenderer::TileRenderer(const Sprite *spr, Tileset** tilesets)
+{
+    this->spr = spr;
+    this->tilesets = tilesets;
+}
+
+void TileRenderer::render(QPainter *painter, QRect *)
+{
+    QRect sprrect(spr->getx()+spr->getOffsetX(), spr->gety()+spr->getOffsetY(), spr->getwidth(), spr->getheight());
+
+    Tileset *targetTileset = nullptr;
+    quint32 tileId = (spr->getNybbleData(12, 15) & 0x7FF) % 512;
+    quint8 tilesetIndex = (spr->getNybbleData(12, 15) & 0x7FF) / 512;
+    if (tilesetIndex < 4)
+        targetTileset = tilesets[tilesetIndex];
+
+    if (targetTileset == nullptr)
+    {
+        painter->fillRect(sprrect, QColor(200, 0, 0, 120));
+    }
+    else
+    {
+        QPixmap pix(spr->getwidth(), spr->getheight());
+        pix.fill(QColor(0,0,0,0));
+        QPainter tempPainter(&pix);
+
+        TileGrid tileGrid;
+        tileGrid[0xFFFFFFFF] = 1;
+
+        tempPainter.setOpacity(0.5);
+        targetTileset->drawTile(tempPainter, tileGrid, tileId, 0, 0, 1, 0);
+        painter->drawPixmap(spr->getx()+spr->getOffsetX(), spr->gety()+spr->getOffsetY(), spr->getwidth(), spr->getheight(), pix);
+    }
+
+    painter->setPen(QPen(Qt::black));
+    painter->drawRect(sprrect);
+    painter->setPen(Qt::NoPen);
+}
+
+DoorFrameRenderer::DoorFrameRenderer(const Sprite *spr)
+{
+    this->spr = spr;
+    if (spr->getNybble(11) & 1)
+        img = new NormalImageRenderer(spr, "door_frame_ghost.png");
+    else
+        img = new NormalImageRenderer(spr, "door_frame.png");
+}
+
+void DoorFrameRenderer::render(QPainter* painter, QRect *drawrect)
+{
+    img->render(painter, drawrect);
+}
+
+BulletBillLauncherUpRenderer::BulletBillLauncherUpRenderer(const Sprite *spr)
+{
+    this->spr = spr;
+}
+
+void BulletBillLauncherUpRenderer::render(QPainter *painter, QRect *)
+{
+    if (spr->getNybble(4) == 1)
+    {
+        painter->drawPixmap(spr->getx(), spr->gety()+spr->getheight()-40, 20, 40, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher_down.png"));
+        for (int i = 0; i < spr->getNybble(10); i++) painter->drawPixmap(spr->getx(), spr->gety()+i*20, 20, 20, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher_middle.png"));
+    }
+    else
+    {
+        painter->drawPixmap(spr->getx(), spr->gety()+spr->getOffsetY(), 20, 40, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher_up.png"));
+        for (int i = 0; i < spr->getNybble(10); i++) painter->drawPixmap(spr->getx(), spr->gety()+spr->getOffsetY()+40+i*20, 20, 20, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher_middle.png"));
+    }
+}
+
+RisingLoweringBulletBillLauncherRenderer::RisingLoweringBulletBillLauncherRenderer(const Sprite *spr)
+{
+    this->spr = spr;
+}
+
+void RisingLoweringBulletBillLauncherRenderer::render(QPainter *painter, QRect *)
+{
+    quint8 end_height = spr->getNybble(10);
+    quint8 start_height = spr->getNybble(11);
+
+    painter->save();
+
+    if (spr->getNybble(4) == 1)
+    {
+        if (start_height > end_height)
+        {
+            painter->drawPixmap(spr->getx(), spr->gety()+spr->getheight()-40, 20, 40, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher.png").transformed(QTransform().scale(1, -1)));
+            for (int i = 0; i < start_height; i++) painter->drawPixmap(spr->getx(), spr->gety()+i*20, 20, 20, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher_middle.png"));
+            painter->setOpacity(0.5);
+            painter->drawPixmap(spr->getx(), spr->gety()+spr->getheight()-40-(start_height-end_height)*20, 20, 40, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher.png").transformed(QTransform().scale(1, -1)));
+            for (int i = 0; i < end_height; i++) painter->drawPixmap(spr->getx(), spr->gety()+i*20, 20, 20, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher_middle.png"));
+        }
+        else if (start_height < end_height)
+        {
+            painter->setOpacity(0.5);
+            painter->drawPixmap(spr->getx(), spr->gety()+spr->getheight()-40, 20, 40, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher.png").transformed(QTransform().scale(1, -1)));
+            for (int i = 0; i < end_height; i++) painter->drawPixmap(spr->getx(), spr->gety()+i*20, 20, 20, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher_middle.png"));
+            painter->setOpacity(1.0);
+            painter->drawPixmap(spr->getx(), spr->gety()+spr->getheight()-40-(end_height-start_height)*20, 20, 40, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher.png").transformed(QTransform().scale(1, -1)));
+            for (int i = 0; i < start_height; i++) painter->drawPixmap(spr->getx(), spr->gety()+i*20, 20, 20, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher_middle.png"));
+        }
+        else
+        {
+            painter->drawPixmap(spr->getx(), spr->gety()+spr->getheight()-40, 20, 40, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher.png").transformed(QTransform().scale(1, -1)));
+            for (int i = 0; i < end_height; i++) painter->drawPixmap(spr->getx(), spr->gety()+i*20, 20, 20, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher_middle.png"));
+        }
+    }
+    else
+    {
+        if (start_height > end_height)
+        {
+            painter->drawPixmap(spr->getx(), spr->gety()+spr->getOffsetY(), 20, 40, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher.png"));
+            for (int i = 0; i < start_height; i++) painter->drawPixmap(spr->getx(), spr->gety()+spr->getOffsetY()+40+i*20, 20, 20, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher_middle.png"));
+            painter->setOpacity(0.5);
+            painter->drawPixmap(spr->getx(), spr->gety()+spr->getOffsetY()-(end_height-start_height)*20, 20, 40, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher.png"));
+            for (int i = 0; i < end_height; i++) painter->drawPixmap(spr->getx(), spr->gety()+spr->getOffsetY()+40+i*20-(end_height-start_height)*20, 20, 20, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher_middle.png"));
+        }
+        else if (start_height < end_height)
+        {
+            painter->setOpacity(0.5);
+            painter->drawPixmap(spr->getx(), spr->gety()+spr->getOffsetY(), 20, 40, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher.png"));
+            for (int i = 0; i < end_height; i++) painter->drawPixmap(spr->getx(), spr->gety()+spr->getOffsetY()+40+i*20, 20, 20, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher_middle.png"));
+            painter->setOpacity(1.0);
+            painter->drawPixmap(spr->getx(), spr->gety()+spr->getOffsetY()+(end_height-start_height)*20, 20, 40, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher.png"));
+            for (int i = 0; i < start_height; i++) painter->drawPixmap(spr->getx(), spr->gety()+spr->getOffsetY()+40+i*20+(end_height-start_height)*20, 20, 20, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher_middle.png"));
+        }
+        else
+        {
+            painter->drawPixmap(spr->getx(), spr->gety()+spr->getOffsetY(), 20, 40, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher.png"));
+            for (int i = 0; i < end_height; i++) painter->drawPixmap(spr->getx(), spr->gety()+spr->getOffsetY()+40+i*20, 20, 20, ImageCache::getInstance()->get(SpriteImg, "bullet_bill_launcher_middle.png"));
+        }
+    }
+
+    painter->restore();
+}
+
+GroundedGrinderRenderer::GroundedGrinderRenderer(const Sprite *spr)
+{
+    this->spr = spr;
+}
+
+void GroundedGrinderRenderer::render(QPainter *painter, QRect *)
+{
+    int x = spr->getx()+spr->getOffsetX();
+    int y = spr->gety()+spr->getOffsetY();
+    int w = spr->getwidth();
+    int h = spr->getheight();
+    painter->drawPixmap(x, y, w, h, ImageCache::getInstance()->get(SpriteImg, spr->getNybble(9) & 1 ? "big_grinder.png" : "grinder.png"));
+}
+
+FlipBlockRenderer::FlipBlockRenderer(const Sprite *spr)
+{
+    this->spr = spr;
+}
+void FlipBlockRenderer::render(QPainter *painter, QRect *)
+{
+    QString overlay;
+
+    int x = spr->getx()+spr->getOffsetX();
+    int y = spr->gety()+spr->getOffsetY();
+
+    switch (spr->getNybble(19))
+    {
+    case 0: break;
+    case 1: overlay = "coin.png"; break;
+    case 2: overlay = "fire_flower.png"; break;
+    case 4: overlay = "super_leaf.png"; break;
+    case 5: overlay = "gold_flower.png"; break;
+    case 6: overlay = "mini_mushroom.png"; break;
+    case 7: overlay = "super_star.png"; break;
+    case 8: overlay = "coin_star.png"; break;
+    case 9: overlay = "mega_mushroom.png"; break;
+    case 10: overlay = "10_coins.png"; break;
+    case 11: overlay = "1up_mushroom.png"; break;
+    case 13: overlay = "trampoline.png"; break;
+    case 14: overlay = "coin_super_mushroom.png"; break;
+    default:
+        painter->drawPixmap(x, y, 20, 20, ImageCache::getInstance()->get(SpriteImg, "flip_block.png"));
+        return;
+    }
+
+    painter->drawPixmap(x, y, 20, 20, ImageCache::getInstance()->get(SpriteImg, "flip_block.png"));
+    painter->drawPixmap(x, y, 20, 20, ImageCache::getInstance()->get(TileOverlay, overlay));
+}
+
+/* END custom */
 
 // Entrance Renderer
 EntranceRenderer::EntranceRenderer(const Entrance *entrance)

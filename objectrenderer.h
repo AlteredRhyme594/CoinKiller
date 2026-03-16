@@ -1128,6 +1128,59 @@ public:
     void render(QPainter *painter, QRect *drawrect);
 };
 
+/* custom */
+
+class TileRenderer: public SpriteRenderer
+{
+public:
+    TileRenderer(const Sprite *spr, Tileset** tilesets);
+    void render(QPainter *painter, QRect *drawrect);
+protected:
+    Tileset** tilesets;
+};
+
+class DoorFrameRenderer: public SpriteRenderer
+{
+public:
+    DoorFrameRenderer(const Sprite *spr);
+    ~DoorFrameRenderer() { delete img; }
+    void render(QPainter *painter, QRect *drawrect);
+protected:
+    NormalImageRenderer *img;
+};
+
+class BulletBillLauncherUpRenderer: public SpriteRenderer
+{
+public:
+    BulletBillLauncherUpRenderer(const Sprite *spr);
+    void render(QPainter *painter, QRect *drawrect);
+};
+
+class RisingLoweringBulletBillLauncherRenderer: public SpriteRenderer
+{
+public:
+    RisingLoweringBulletBillLauncherRenderer(const Sprite *spr);
+    void render(QPainter *painter, QRect *drawrect);
+};
+
+// Sprite 354: Grounded Grinder
+class GroundedGrinderRenderer: public SpriteRenderer
+{
+public:
+    GroundedGrinderRenderer(const Sprite *spr);
+    void render(QPainter *painter, QRect *drawrect);
+};
+
+// Sprite 359: Flip Block
+class FlipBlockRenderer: public SpriteRenderer
+{
+public:
+    FlipBlockRenderer(const Sprite *spr);
+    void render(QPainter *painter, QRect *drawrect);
+};
+
+/* END custom */
+
 class EntranceRenderer : public ObjectRenderer
 {
 public:
