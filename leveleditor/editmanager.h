@@ -139,7 +139,7 @@ private:
 
     void cloneObjects(QList<Object*> objects);
 
-    void updateSelectionBounds();
+    void updateSelectionBounds(Qt::KeyboardModifiers modifiers);
 
     // Sorts the selection, so you things end up with correct z-coordinates
     void sortSelection();

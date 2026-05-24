@@ -121,7 +121,7 @@ void EditManager::mouseDown(int x, int y, Qt::MouseButtons buttons, Qt::Keyboard
         mouseAct = getActionAtPos(x, y);
         if (!clone) actualCursor = getCursorAtPos(x, y);
         else actualCursor = Qt::SizeAllCursor;
-        updateSelectionBounds();
+        updateSelectionBounds(modifiers);
     }
 }
 
@@ -176,7 +176,7 @@ void EditManager::mouseDrag(int x, int y, Qt::KeyboardModifiers modifiers, QRect
     }
     else
     {
-        updateSelectionBounds();
+        updateSelectionBounds(modifiers);
 
         // Drag
         if ((mouseAct.hor == ResizeNone && mouseAct.vert == ResizeNone) || clone)
@@ -817,7 +817,7 @@ Qt::CursorShape EditManager::getCursorAtPos(int x, int y)
     return Qt::ArrowCursor;
 }
 
-void EditManager::updateSelectionBounds()
+void EditManager::updateSelectionBounds(Qt::KeyboardModifiers modifiers)
 {
     minBoundX = 2147483647;
     minBoundY = 2147483647;
@@ -836,7 +836,7 @@ void EditManager::updateSelectionBounds()
 
         if (o->isResizable())
         {
-            if (is<Zone*>(o))
+            if (is<Zone*>(o) && !(modifiers & Qt::KeyboardModifier::AltModifier))
             {
                 if (o->getwidth() - 400 < minSizeX) minSizeX = o->getwidth() - 400;
                 if (o->getheight() - 240 < minSizeY) minSizeY = o->getheight() - 240;
