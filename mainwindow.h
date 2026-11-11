@@ -25,6 +25,10 @@
 
 #include <QNetworkReply>
 
+class QTreeView;
+class QEvent;
+class QMenu;
+
 namespace Ui {
 class MainWindow;
 }
@@ -49,13 +53,20 @@ private slots:
     void tilesetListSelectedIndexChanged();
     void openTilesetFromListIndex(const QModelIndex &index);
 
+    void filterLevelList(const QString &text);
+    void filterTilesetList(const QString &text);
+    void showFilterBox();
+
     void addLevel();
     void removeLevel();
 
     void addTileset();
     void removeTileset();
+    void duplicateTileset();
+    void renameTileset();
 
     void updateSpriteData();
+    void showSpriteDataSettings();
 
     void setDarkMode(bool isDarkMode);
     void setShouldStartMaximized(bool shouldMaximize);
@@ -70,31 +81,48 @@ private slots:
     void openInSarcExplorer();
     void showInFileExplorer();
 
+    void openRecentROMFS();
+    void clearRecentROMFS();
+
     void handleWatchedDirectoryChanged(const QString &path);
 
     void sdDownloadFinished(QNetworkReply::NetworkError error, const QByteArray &data, const QUrl &url);
 
 private:
-    void loadGame(const QString &path);
+    bool loadGame(const QString &path);
     void setGameLoaded(bool loaded);
 
     void initialiseUi();
     void createContextMenus();
     void checkSpriteDataVersion();
+    void updateRecentMenu();
+    void populateTilesetGroupFilter();
 
     void loadLevelList();
     void loadTilesetList();
 
+    bool applyTreeFilter(QTreeView *view, const QModelIndex &parent, const QString &filter, bool parentMatched, bool matchOnlyLeaves = false);
+
     void changeEvent(QEvent *event) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
     bool checkForMissingFiles();
 
     QString getFilePath(QAction *action);
 
+    bool copySarcFile(const QString &fromPath, const QString &toPath);
+    void updateTilesetInternals(const QString &fromBase, const QString &toName, int slot = -1);
+
+    int tilesetSlotFromPrefix(const QString &name);
+    QString tilesetPrefixForSlot(int slot);
+    QString stripTilesetPrefix(const QString &name);
+    QString ensureTilesetSlot(const QString &name, int slot);
+
     Ui::MainWindow* ui {};
     Game* game {};
     SettingsManager* settings {};
     ClickableLabel* statusLabel {};
+    QMenu* recentMenu {};
 
     QFileSystemWatcher fileSystemWatcher {};
 

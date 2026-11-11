@@ -69,6 +69,7 @@ SOURCES += \
     leveleditor/commands/zoneboundingcommands.cpp \
     leveleditor/commands/zonecommands.cpp \
     leveleditor/areaeditorwidget.cpp \
+    leveleditor/backgroundlist.cpp \
     leveleditor/editmanager.cpp \
     leveleditor/entranceeditorwidget.cpp \
     leveleditor/eventeditorwidget.cpp \
@@ -83,7 +84,9 @@ SOURCES += \
     leveleditor/settingsdialog.cpp \
     leveleditor/spriteeditorwidget.cpp \
     leveleditor/spriteidswidget.cpp \
+    leveleditor/sortabletreewidget.cpp \
     leveleditor/tilesetpalette.cpp \
+    leveleditor/tilesetselectdialog.cpp \
     leveleditor/zoneeditorwidget.cpp \
     tileseteditor/tileseteditorwidgets.cpp \
     tileseteditor/tileseteditorwindow.cpp \
@@ -99,11 +102,13 @@ SOURCES += \
     newtilesetdialog.cpp \
     objectrenderer.cpp \
     objects.cpp \
-    rg_etc1.cpp \
+    third_party/ExETC1/Etc1.cpp \
     sarcexplorerwindow.cpp \
     settingsmanager.cpp \
     spritedata.cpp \
+    spritedatadialog.cpp \
     tileset.cpp \
+    tilesetlist.cpp \
     unitsconvert.cpp
 
 HEADERS += \
@@ -130,6 +135,7 @@ HEADERS += \
     leveleditor/commands/zoneboundingcommands.h \
     leveleditor/commands/zonecommands.h \
     leveleditor/areaeditorwidget.h \
+    leveleditor/backgroundlist.h \
     leveleditor/editmanager.h \
     leveleditor/entranceeditorwidget.h \
     leveleditor/eventeditorwidget.h \
@@ -145,7 +151,9 @@ HEADERS += \
     leveleditor/settingsdialog.h \
     leveleditor/spriteeditorwidget.h \
     leveleditor/spriteidswidget.h \
+    leveleditor/sortabletreewidget.h \
     leveleditor/tilesetpalette.h \
+    leveleditor/tilesetselectdialog.h \
     leveleditor/zoneeditorwidget.h \
     tileseteditor/tileseteditorwidgets.h \
     tileseteditor/tileseteditorwindow.h \
@@ -155,7 +163,6 @@ HEADERS += \
     filedownloader.h \
     game.h \
     imagecache.h \
-    is.h \
     level.h \
     levelmanager.h \
     mainwindow.h \
@@ -163,12 +170,13 @@ HEADERS += \
     newtilesetdialog.h \
     objectrenderer.h \
     objects.h \
-    rg_etc1.h \
     sarcexplorerwindow.h \
     settingsmanager.h \
     shit.h \
     spritedata.h \
+    spritedatadialog.h \
     tileset.h \
+    tilesetlist.h \
     unitsconvert.h \
     windowbase.h
 
@@ -179,11 +187,24 @@ FORMS += \
     mainwindow.ui \
     newleveldialog.ui \
     newtilesetdialog.ui \
-    sarcexplorerwindow.ui
+    sarcexplorerwindow.ui \
+    spritedatadialog.ui
 
 TRANSLATIONS += \
     resource/translations/English.ts \
     resource/translations/German.ts \
     resource/translations/Italian.ts
 
-CONFIG += c++17
+CONFIG += c++23
+
+msvc {
+    QMAKE_CXXFLAGS += /std:c++latest
+} else {
+    QMAKE_CXXFLAGS += -std=c++23
+}
+
+macx-clang {
+    QMAKE_CXXFLAGS += -include arm_acle.h
+}
+
+INCLUDEPATH += third_party/ExETC1

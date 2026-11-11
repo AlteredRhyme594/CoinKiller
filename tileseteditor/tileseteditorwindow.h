@@ -26,12 +26,14 @@ class TilesetEditorWindow : public WindowBase
 public:
     explicit TilesetEditorWindow(WindowBase *parent, Tileset *tileset);
     ~TilesetEditorWindow();
+    void closeEvent(QCloseEvent *event);
 
 signals:
     void selectedObjectChanged(int objNbr);
 
 public slots:
     void updateSelectedTile(int tileTL, int tileBR);
+    void updateSelectedTiles(QList<int> tiles);
     void updateSelectedOvTile(int ovTile);
     void setSelTileData(QString text);
     void updateObjectEditor();
@@ -104,7 +106,7 @@ private slots:
 
     void on_actionImportImageWithPadding_triggered();
 
-    void on_actionImportImageLegacy_triggered();
+    void on_actionImportImageReplaceSelection_triggered();
 
     void on_actionToggleCollision_toggled(bool value);
 
@@ -132,6 +134,10 @@ private:
 
     int selectedTileTL;
     int selectedTileBR;
+
+    QSet<int> selectedTiles;
+
+    bool updatingSelection = false;
 
     int selectedSpecialBehavior;
     int selectedParameter;
@@ -166,14 +172,16 @@ private:
 
     SettingsManager* settings;
 
-    bool isConvertCancelled;
-
     QLabel* editStatus;
 
-    void changeEvent(QEvent* event);
+    QByteArray savedTilesetState;
+    bool unsavedChanges = false;
 
-private slots:
-    void convertCancelled();
+    void updateUnsavedStatus();
+    QByteArray tilesetState();
+    int showSaveDialog();
+
+    void changeEvent(QEvent* event);
 };
 
 class ImportTilesetImageDlg : public QDialog

@@ -5,6 +5,7 @@
 #include <QVBoxLayout>
 #include <QGridLayout>
 #include <QLabel>
+#include <cmath>
 
 #include "commands/entrancecommands.h"
 
@@ -67,8 +68,26 @@ EntranceEditorWidget::EntranceEditorWidget(QList<Entrance*> *entrances, QUndoSta
     connectedPipeExitDirection->addItems({ "Up", "Down", "Left", "Right" });
     connect(connectedPipeExitDirection, &QComboBox::currentIndexChanged, this, &EntranceEditorWidget::handleConnectedPipeExitDirectionChange);
 
-    entrancesList = new QListWidget();
-    connect(entrancesList, &QListWidget::itemClicked, this, &EntranceEditorWidget::handleEntranceListIndexChanged);
+    connectedPipe = new QCheckBox(tr("Connected Pipe"));
+    connect(connectedPipe, &QAbstractButton::toggled, this, &EntranceEditorWidget::handleConnectedPipeChange);
+
+    pathId = new QSpinBox();
+    pathId->setRange(0, 255);
+    connect(pathId, &QSpinBox::valueChanged, this, &EntranceEditorWidget::handlePathIdChange);
+
+    connectedPipeReversed = new QCheckBox(tr("Connected Pipe Reversed"));
+    connect(connectedPipeReversed, &QAbstractButton::toggled, this, &EntranceEditorWidget::handleConnectedPipeReversedChange);
+
+    connectedPipeExitDirection = new QComboBox();
+    connectedPipeExitDirection->addItems({ "Up", "Down", "Left", "Right" });
+    connect(connectedPipeExitDirection, &QComboBox::currentIndexChanged, this, &EntranceEditorWidget::handleConnectedPipeExitDirectionChange);
+
+    entrancesList = new SortableTreeWidget();
+    entrancesList->setColumnCount(3);
+    entrancesList->setHeaderLabels(QStringList() << tr("Entrance ID") << tr("Type") << tr("Position"));
+    entrancesList->setSortableColumns({0, 1, 2});
+    entrancesList->setFlexibleColumn(1);
+    connect(entrancesList, &QTreeWidget::itemClicked, this, &EntranceEditorWidget::handleEntranceListIndexChanged);
 
     QVBoxLayout* layout = new QVBoxLayout();
     setLayout(layout);
@@ -128,6 +147,8 @@ void EntranceEditorWidget::changeEvent(QEvent* event)
 {
     if (event->type() == QEvent::LanguageChange)
     {
+        entrancesList->setHeaderLabels(QStringList() << tr("Entrance ID") << tr("Type") << tr("Position"));
+
         QFile file(SettingsManager::getInstance()->getFilePath("entrancetypes.txt"));
         if(!file.open(QIODevice::ReadOnly))
             return;
@@ -162,7 +183,17 @@ void EntranceEditorWidget::select(Entrance* entr)
     editingAnEntrance = true;
     updateInfo();
     handleChanges = false;
-    entrancesList->setCurrentRow(entrances->indexOf(entr));
+
+    for (int i = 0; i < entrancesList->topLevelItemCount(); i++)
+    {
+        QTreeWidgetItem* item = entrancesList->topLevelItem(i);
+        if (static_cast<Entrance*>(item->data(0, Qt::UserRole).value<void*>()) == entr)
+        {
+            entrancesList->setCurrentItem(item);
+            break;
+        }
+    }
+
     handleChanges = true;
 }
 
@@ -188,8 +219,10 @@ void EntranceEditorWidget::updateEditor()
 
 void EntranceEditorWidget::updateList()
 {
-    QModelIndex index;
-    if (entrancesList->selectionModel()->selectedIndexes().size() != 0) index = entrancesList->selectionModel()->selectedIndexes().at(0);
+    Entrance* selected = nullptr;
+    if (!entrancesList->selectedItems().isEmpty())
+        selected = static_cast<Entrance*>(entrancesList->selectedItems().first()->data(0, Qt::UserRole).value<void*>());
+
     entrancesList->clear();
     foreach (Entrance* entr, *entrances)
     {
@@ -199,9 +232,31 @@ void EntranceEditorWidget::updateList()
         else
             type = tr("UNKNOWN");
 
-        entrancesList->addItem(tr("Entrance %1: %2 (X: %3, Y: %4)").arg(entr->getid()).arg(type).arg(to16(entr->getx())).arg(to16(entr->gety())));
+        SortableTreeItem* item = new SortableTreeItem();
+        item->setData(0, Qt::DisplayRole, entr->getid());
+        item->setSortKey(0, static_cast<double>(entr->getid()));
+        item->setText(1, type);
+        item->setSortKey(1, type);
+        item->setText(2, tr("(X: %1, Y: %2)").arg(to16(entr->getx())).arg(to16(entr->gety())));
+        item->setSortKey(2, std::hypot(static_cast<double>(to16(entr->getx())), static_cast<double>(to16(entr->gety()))));
+        item->setData(0, Qt::UserRole, QVariant::fromValue(static_cast<void*>(entr)));
+        entrancesList->addTopLevelItem(item);
     }
-    entrancesList->setCurrentIndex(index);
+
+    entrancesList->resort();
+
+    if (selected == nullptr)
+        return;
+
+    for (int i = 0; i < entrancesList->topLevelItemCount(); i++)
+    {
+        QTreeWidgetItem* item = entrancesList->topLevelItem(i);
+        if (static_cast<Entrance*>(item->data(0, Qt::UserRole).value<void*>()) == selected)
+        {
+            entrancesList->setCurrentItem(item);
+            break;
+        }
+    }
 }
 
 void EntranceEditorWidget::updateInfo()
@@ -231,10 +286,10 @@ void EntranceEditorWidget::updateInfo()
     handleChanges = true;
 }
 
-void EntranceEditorWidget::handleEntranceListIndexChanged(QListWidgetItem *item)
+void EntranceEditorWidget::handleEntranceListIndexChanged(QTreeWidgetItem *item)
 {
     if (!handleChanges) return;
-    editEntrance = entrances->at(entrancesList->row(item));
+    editEntrance = static_cast<Entrance*>(item->data(0, Qt::UserRole).value<void*>());
     editingAnEntrance = true;
     updateInfo();
     emit selectedEntrChanged(editEntrance);

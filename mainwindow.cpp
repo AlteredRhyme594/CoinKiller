@@ -28,6 +28,14 @@
 #include <QDesktopServices>
 #include <QStyleFactory>
 #include <QFileSystemWatcher>
+#include <QInputDialog>
+#include <QLineEdit>
+#include <QRegularExpression>
+#include <QRegularExpressionValidator>
+#include <QShortcut>
+#include <QKeyEvent>
+#include <QMenu>
+#include <QDir>
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
@@ -39,6 +47,7 @@
 #include "newtilesetdialog.h"
 #include "newleveldialog.h"
 #include "spritedata.h"
+#include "spritedatadialog.h"
 #include "filedownloader.h"
 
 MainWindow::MainWindow(WindowBase *parent) :
@@ -85,11 +94,47 @@ void MainWindow::initialiseUi()
     connect(ui->actionAbout,             &QAction::triggered, this, &MainWindow::showAboutDialog);
     connect(ui->actionSarcExplorer,      &QAction::triggered, this, &MainWindow::openSarcExplorer);
 
+    recentMenu = new QMenu(tr("Recent"), this);
+
+    QAction* beforeRecent = nullptr;
+    bool afterLoad = false;
+    for (QAction* action : ui->menuFile->actions())
+    {
+        if (afterLoad)
+        {
+            beforeRecent = action;
+            break;
+        }
+
+        if (action == ui->actionLoadUnpackedROMFS)
+            afterLoad = true;
+    }
+
+    if (beforeRecent != nullptr)
+        ui->menuFile->insertMenu(beforeRecent, recentMenu);
+    else
+        ui->menuFile->addMenu(recentMenu);
+
+    updateRecentMenu();
+
     connect(ui->levelList, &QTreeView::clicked,       this, &MainWindow::levelListSelectedIndexChanged);
     connect(ui->levelList, &QTreeView::doubleClicked, this, &MainWindow::openLevelFromListIndex);
 
     connect(ui->tilesetList, &QTreeView::clicked,       this, &MainWindow::tilesetListSelectedIndexChanged);
     connect(ui->tilesetList, &QTreeView::doubleClicked, this, &MainWindow::openTilesetFromListIndex);
+
+    connect(ui->levelFilterEdit,   &QLineEdit::textChanged, this, &MainWindow::filterLevelList);
+    connect(ui->tilesetFilterEdit, &QLineEdit::textChanged, this, &MainWindow::filterTilesetList);
+    connect(ui->tilesetGroupCombo, &QComboBox::currentIndexChanged, this, [this](int) {
+        filterTilesetList(ui->tilesetFilterEdit->text());
+    });
+
+    ui->levelFilterEdit->setVisible(false);
+    ui->levelList->installEventFilter(this);
+    ui->tilesetList->installEventFilter(this);
+
+    QShortcut* findShortcut = new QShortcut(QKeySequence::Find, this);
+    connect(findShortcut, &QShortcut::activated, this, &MainWindow::showFilterBox);
 
     connect(ui->addLevelBtn,    &QPushButton::clicked, this, &MainWindow::addLevel);
     connect(ui->removeLevelBtn, &QPushButton::clicked, this, &MainWindow::removeLevel);
@@ -98,6 +143,7 @@ void MainWindow::initialiseUi()
     connect(ui->removeTilesetBtn, &QPushButton::clicked, this, &MainWindow::removeTileset);
 
     connect(ui->updateSpriteData, &QPushButton::clicked, this, &MainWindow::updateSpriteData);
+    connect(ui->spriteDataSettingsButton, &QToolButton::clicked, this, &MainWindow::showSpriteDataSettings);
 
     connect(ui->darkModeCheckbox,  &QCheckBox::toggled, this, &MainWindow::setDarkMode);
     connect(ui->maximisedCheckbox, &QCheckBox::toggled, this, &MainWindow::setShouldStartMaximized);
@@ -116,15 +162,15 @@ void MainWindow::initialiseUi()
 
     settings->setupLanguageSelector(ui->languageSelector);
 
+    bool loadedLast = false;
+
     if (settings->get("loadLastOnStart", false).toBool() && !settings->getLastRomFSPath().isEmpty())
-    {
-        loadGame(settings->getLastRomFSPath());
+        loadedLast = loadGame(settings->getLastRomFSPath());
+
+    if (loadedLast)
         ui->actionShowROMFSDir->setEnabled(true);
-    }
     else
-    {
         setGameLoaded(false);
-    }
 
     connect(&fileSystemWatcher, &QFileSystemWatcher::directoryChanged, this, &MainWindow::handleWatchedDirectoryChanged);
 }
@@ -148,7 +194,7 @@ void MainWindow::checkSpriteDataVersion()
         message.exec();
 
         this->setEnabled(false);
-        FileDownloader::download(QUrl("https://smbnext.net/spritedb/spritexml.php"), this, SLOT(sdDownloadFinished(QNetworkReply::NetworkError, const QByteArray&, const QUrl&)));
+        FileDownloader::download(QUrl(settings->getSpriteDataUrl()), this, SLOT(sdDownloadFinished(QNetworkReply::NetworkError, const QByteArray&, const QUrl&)));
     }
 }
 
@@ -162,6 +208,8 @@ void MainWindow::loadLevelList()
     }
 
     ui->levelList->setModel(courseModel);
+
+    filterLevelList(ui->levelFilterEdit->text());
 }
 
 
@@ -175,6 +223,160 @@ void MainWindow::loadTilesetList()
     }
 
     ui->tilesetList->setModel(tilesetModel);
+    ui->tilesetList->expandAll();
+
+    populateTilesetGroupFilter();
+
+    filterTilesetList(ui->tilesetFilterEdit->text());
+}
+
+void MainWindow::filterLevelList(const QString &text)
+{
+    applyTreeFilter(ui->levelList, QModelIndex(), text, false);
+
+    if (!text.isEmpty())
+        ui->levelList->expandAll();
+}
+
+void MainWindow::filterTilesetList(const QString &text)
+{
+    applyTreeFilter(ui->tilesetList, QModelIndex(), text, false, true);
+
+    const QString group = ui->tilesetGroupCombo->currentData().toString();
+    QAbstractItemModel *model = ui->tilesetList->model();
+
+    if (!group.isEmpty() && model != nullptr)
+    {
+        for (int row = 0; row < model->rowCount(QModelIndex()); row++)
+        {
+            QModelIndex index = model->index(row, 0, QModelIndex());
+
+            if (index.data(Qt::DisplayRole).toString() != group)
+                ui->tilesetList->setRowHidden(row, QModelIndex(), true);
+        }
+    }
+
+    if (!text.isEmpty() || !group.isEmpty())
+        ui->tilesetList->expandAll();
+}
+
+void MainWindow::populateTilesetGroupFilter()
+{
+    const QString currentGroup = ui->tilesetGroupCombo->currentData().toString();
+
+    ui->tilesetGroupCombo->blockSignals(true);
+    ui->tilesetGroupCombo->clear();
+    ui->tilesetGroupCombo->addItem(tr("All"), QString());
+
+    QAbstractItemModel *model = ui->tilesetList->model();
+
+    if (model != nullptr)
+    {
+        for (int row = 0; row < model->rowCount(QModelIndex()); row++)
+        {
+            QString name = model->index(row, 0, QModelIndex()).data(Qt::DisplayRole).toString();
+            ui->tilesetGroupCombo->addItem(name, name);
+        }
+    }
+
+    int index = ui->tilesetGroupCombo->findData(currentGroup);
+    ui->tilesetGroupCombo->setCurrentIndex(index > 0 ? index : 0);
+    ui->tilesetGroupCombo->blockSignals(false);
+}
+
+bool MainWindow::applyTreeFilter(QTreeView *view, const QModelIndex &parent, const QString &filter, bool parentMatched, bool matchOnlyLeaves)
+{
+    QAbstractItemModel *model = view->model();
+
+    if (model == nullptr)
+        return false;
+
+    bool anyVisible = false;
+
+    for (int row = 0; row < model->rowCount(parent); row++)
+    {
+        QModelIndex index = model->index(row, 0, parent);
+
+        bool selfMatch;
+        if (filter.isEmpty())
+        {
+            selfMatch = true;
+        }
+        else if (matchOnlyLeaves)
+        {
+            bool isLeaf = model->rowCount(index) == 0;
+            QModelIndex filenameIndex = model->index(row, 1, parent);
+
+            selfMatch = isLeaf
+                    && (index.data(Qt::DisplayRole).toString().contains(filter, Qt::CaseInsensitive)
+                        || filenameIndex.data(Qt::DisplayRole).toString().contains(filter, Qt::CaseInsensitive));
+        }
+        else
+        {
+            selfMatch = index.data(Qt::DisplayRole).toString().contains(filter, Qt::CaseInsensitive);
+        }
+
+        bool force = parentMatched || selfMatch;
+
+        bool childVisible = applyTreeFilter(view, index, filter, force, matchOnlyLeaves);
+        bool visible = force || childVisible;
+
+        view->setRowHidden(row, parent, !visible);
+
+        if (visible)
+            anyVisible = true;
+    }
+
+    return anyVisible;
+}
+
+void MainWindow::showFilterBox()
+{
+    if (ui->tabWidget->currentWidget() == ui->tab_tilesets)
+    {
+        ui->tilesetFilterEdit->setVisible(true);
+        ui->tilesetFilterEdit->setFocus();
+        ui->tilesetFilterEdit->selectAll();
+    }
+    else
+    {
+        ui->levelFilterEdit->setVisible(true);
+        ui->levelFilterEdit->setFocus();
+        ui->levelFilterEdit->selectAll();
+    }
+}
+
+bool MainWindow::eventFilter(QObject* watched, QEvent* event)
+{
+    if (event->type() == QEvent::KeyPress && (watched == ui->levelList || watched == ui->tilesetList))
+    {
+        QLineEdit* target = (watched == ui->levelList) ? ui->levelFilterEdit : ui->tilesetFilterEdit;
+        QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+
+        if (!(keyEvent->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier)))
+        {
+            const QString text = keyEvent->text();
+
+            if (!text.isEmpty() && text.at(0).isPrint())
+            {
+                target->setVisible(true);
+                target->setText(target->text() + text);
+                target->setFocus();
+                return true;
+            }
+
+            if (keyEvent->key() == Qt::Key_Backspace && !target->text().isEmpty())
+            {
+                const QString current2 = target->text();
+                target->setVisible(true);
+                target->setText(current2.left(current2.size() - 1));
+                target->setFocus();
+                return true;
+            }
+        }
+    }
+
+    return QMainWindow::eventFilter(watched, event);
 }
 
 void MainWindow::changeEvent(QEvent* event)
@@ -182,6 +384,7 @@ void MainWindow::changeEvent(QEvent* event)
     if (event->type() == QEvent::LanguageChange)
     {
         ui->retranslateUi(this);
+        updateRecentMenu();
 
         if (gameLoaded)
         {
@@ -219,9 +422,14 @@ void MainWindow::showAboutDialog()
     msgBox.exec();
 }
 
-void MainWindow::loadGame(const QString& path)
+bool MainWindow::loadGame(const QString& path)
 {
+    if (!QDir(path).exists())
+        return false;
+
     settings->setLastRomFSPath(path);
+    settings->addRecentROMFS(path);
+    updateRecentMenu();
 
     game = new Game(path);
 
@@ -243,6 +451,65 @@ void MainWindow::loadGame(const QString& path)
         << path + "/Unit/";
 
     fileSystemWatcher.addPaths(watchPaths);
+
+    return true;
+}
+
+void MainWindow::updateRecentMenu()
+{
+    if (recentMenu == nullptr)
+        return;
+
+    recentMenu->clear();
+    recentMenu->setTitle(tr("Recent"));
+
+    QStringList recents = settings->getExistingRecentROMFS();
+
+    if (recents.isEmpty())
+    {
+        QAction* emptyAction = recentMenu->addAction(tr("<empty>"));
+        emptyAction->setEnabled(false);
+        return;
+    }
+
+    for (const QString& path : recents)
+    {
+        QAction* recentAction = recentMenu->addAction(path);
+        recentAction->setData(path);
+        connect(recentAction, &QAction::triggered, this, &MainWindow::openRecentROMFS);
+    }
+
+    recentMenu->addSeparator();
+
+    QAction* clearAction = recentMenu->addAction(tr("Clear History"));
+    connect(clearAction, &QAction::triggered, this, &MainWindow::clearRecentROMFS);
+}
+
+void MainWindow::openRecentROMFS()
+{
+    QAction* action = qobject_cast<QAction*>(sender());
+    if (action == nullptr)
+        return;
+
+    QString path = action->data().toString();
+    if (path.isEmpty())
+        return;
+
+    if (!loadGame(path))
+    {
+        QMessageBox::critical(this, "CoinKiller", tr("This directory does not exist."));
+        settings->removeRecentROMFS(path);
+        updateRecentMenu();
+        return;
+    }
+
+    ui->actionShowROMFSDir->setEnabled(true);
+}
+
+void MainWindow::clearRecentROMFS()
+{
+    settings->clearRecentROMFS();
+    updateRecentMenu();
 }
 
 void MainWindow::loadUnpackedROMFS()
@@ -306,7 +573,7 @@ bool MainWindow::checkForMissingFiles()
     << "spritecategories.xml"
     << "spritedata.xml"
     << "tilebehaviors.xml"
-    << "tilesetnames.txt"
+    << "tilesets.xml"
     << "environmentnames.txt";
 
     QList<int> missingFilesIds;
@@ -352,7 +619,13 @@ void MainWindow::updateSpriteData()
 
     this->setEnabled(false);
 
-    FileDownloader::download(QUrl("https://smbnext.net/spritedb/spritexml.php"), this, SLOT(sdDownloadFinished(QNetworkReply::NetworkError, const QByteArray&, const QUrl&)));
+    FileDownloader::download(QUrl(settings->getSpriteDataUrl()), this, SLOT(sdDownloadFinished(QNetworkReply::NetworkError, const QByteArray&, const QUrl&)));
+}
+
+void MainWindow::showSpriteDataSettings()
+{
+    SpriteDataDialog dialog(this);
+    dialog.exec();
 }
 
 void MainWindow::sdDownloadFinished(QNetworkReply::NetworkError error, const QByteArray& data, const QUrl& url)
@@ -469,27 +742,16 @@ void MainWindow::addTileset()
     if (result != QDialog::Accepted)
         return;
 
-    if (game->fs->fileExists("/Unit/" + ntd.getName() + ".sarc"))
+    QString newName = ensureTilesetSlot(ntd.getBaseName(), ntd.getSlot());
+
+    if (game->fs->fileExists("/Unit/" + newName + ".sarc"))
     {
         QMessageBox::information(this, "CoinKiller", tr("A tileset with that name already exists."), QMessageBox::StandardButton::Ok);
         return;
     }
 
-    blankTs.copy(settings->getLastRomFSPath() + "/Unit/" + ntd.getName() + ".sarc");
-
-    SarcFilesystem sarc(game->fs->openFile("/Unit/" + ntd.getName() + ".sarc"));
-    sarc.renameFile("BG_chk/d_bgchk_REPLACE.bin", "d_bgchk_" + ntd.getName() + ".bin");
-    sarc.renameFile("BG_tex/REPLACE.ctpk", ntd.getName() + ".ctpk");
-    sarc.renameFile("BG_unt/REPLACE.bin", ntd.getName() + ".bin");
-    sarc.renameFile("BG_unt/REPLACE_add.bin", ntd.getName() + "_add.bin");
-    sarc.renameFile("BG_unt/REPLACE_hd.bin", ntd.getName() + "_hd.bin");
-
-    Tileset ts(game, ntd.getName());
-    ts.setSlot(ntd.getSlot());
-    ts.setInternalName(ntd.getName());
-    ts.save();
-
-    loadTilesetList();
+    blankTs.copy(settings->getLastRomFSPath() + "/Unit/" + newName + ".sarc");
+    updateTilesetInternals("REPLACE", newName, ntd.getSlot());
 }
 
 void MainWindow::removeTileset()
@@ -510,6 +772,82 @@ void MainWindow::removeTileset()
 
         ui->removeTilesetBtn->setDisabled(true);
     }
+}
+
+void MainWindow::duplicateTileset()
+{
+    if (game == nullptr)
+        return;
+
+    QString selTsName = ui->tilesetList->selectionModel()->selectedIndexes().at(0).data(Qt::UserRole+1).toString();
+    if (selTsName.isEmpty())
+        return;
+
+    int sourceSlot = tilesetSlotFromPrefix(selTsName);
+
+    NewTilesetDialog ntd(this, settings, stripTilesetPrefix(selTsName) + "_copy", sourceSlot, tr("Duplicate Tileset..."));
+    int result = ntd.exec();
+
+    if (result != QDialog::Accepted)
+        return;
+
+    int slot = ntd.getSlot();
+    QString newName = ensureTilesetSlot(ntd.getBaseName(), slot);
+
+    if (game->fs->fileExists("/Unit/" + newName + ".sarc"))
+    {
+        QMessageBox::information(this, "CoinKiller", tr("A tileset with that name already exists."), QMessageBox::StandardButton::Ok);
+        return;
+    }
+
+    if (!copySarcFile("/Unit/" + selTsName + ".sarc", "/Unit/" + newName + ".sarc"))
+        return;
+
+    updateTilesetInternals(selTsName, newName, slot);
+}
+
+void MainWindow::renameTileset()
+{
+    if (game == nullptr)
+        return;
+
+    QString selTsName = ui->tilesetList->selectionModel()->selectedIndexes().at(0).data(Qt::UserRole+1).toString();
+    if (selTsName.isEmpty())
+        return;
+
+    int slot = tilesetSlotFromPrefix(selTsName);
+
+    QInputDialog dlg(this);
+    dlg.setWindowTitle("CoinKiller Next");
+    dlg.setLabelText(tr("Rename %1 to:").arg(selTsName));
+    dlg.setTextValue(selTsName);
+    if (QLineEdit *lineEdit = dlg.findChild<QLineEdit*>())
+        lineEdit->setValidator(new QRegularExpressionValidator(QRegularExpression("[^\\s]*"), lineEdit));
+
+    bool ok = dlg.exec() == QDialog::Accepted;
+    QString newName = dlg.textValue();
+    if (!ok || newName.trimmed().isEmpty())
+        return;
+
+    newName = ensureTilesetSlot(newName.trimmed(), slot);
+
+    if (newName == selTsName)
+        return;
+
+    if (game->fs->fileExists("/Unit/" + newName + ".sarc"))
+    {
+        QMessageBox::information(this, "CoinKiller", tr("A tileset with that name already exists."), QMessageBox::StandardButton::Ok);
+        return;
+    }
+
+    if (!copySarcFile("/Unit/" + selTsName + ".sarc", "/Unit/" + newName + ".sarc"))
+        return;
+
+    game->fs->deleteFile("/Unit/" + selTsName + ".sarc");
+
+    updateTilesetInternals(selTsName, newName);
+
+    ui->removeTilesetBtn->setDisabled(true);
 }
 
 void MainWindow::tilesetListSelectedIndexChanged()
@@ -623,11 +961,15 @@ void MainWindow::createTilesetListContextMenu(const QPoint &pos)
     QAction openTileset(tr("Open In Tileset Editor"), this);
     QAction sarcExplorer(tr("Open In Sarc Explorer"), this);
     QAction fileExplorer(tr("Show In File Explorer"), this);
+    QAction renameTileset(tr("Rename Tileset"), this);
+    QAction duplicateTileset(tr("Duplicate Tileset"), this);
     QAction removeTileset(tr("Remove Tileset"), this);
 
     connect(&openTileset,   &QAction::triggered, this, &MainWindow::openTilesetFromConextMenu);
     connect(&sarcExplorer,  &QAction::triggered, this, &MainWindow::openInSarcExplorer);
     connect(&fileExplorer,  &QAction::triggered, this, &MainWindow::showInFileExplorer);
+    connect(&renameTileset, &QAction::triggered, this, &MainWindow::renameTileset);
+    connect(&duplicateTileset, &QAction::triggered, this, &MainWindow::duplicateTileset);
     connect(&removeTileset, &QAction::triggered, this, &MainWindow::removeTileset);
 
     openTileset.setData(QVariant(pos));
@@ -637,6 +979,9 @@ void MainWindow::createTilesetListContextMenu(const QPoint &pos)
     contextMenu.addAction(&openTileset);
     contextMenu.addAction(&sarcExplorer);
     contextMenu.addAction(&fileExplorer);
+    contextMenu.addSeparator();
+    contextMenu.addAction(&renameTileset);
+    contextMenu.addAction(&duplicateTileset);
     contextMenu.addSeparator();
     contextMenu.addAction(&removeTileset);
 
@@ -751,4 +1096,78 @@ void MainWindow::handleWatchedDirectoryChanged(const QString& path)
     {
         loadTilesetList();
     }
+}
+
+bool MainWindow::copySarcFile(const QString &fromPath, const QString &toPath)
+{
+    FileBase* src = game->fs->openFile(fromPath);
+    src->open();
+    const quint64 srcSize = src->size();
+    QByteArray blob(static_cast<int>(srcSize), '\0');
+    src->readData(reinterpret_cast<quint8*>(blob.data()), srcSize);
+    src->close();
+    delete src;
+
+    FileBase* dst = game->fs->openFile(toPath);
+    dst->open();
+    dst->resize(blob.size());
+    dst->seek(0);
+    dst->writeData(reinterpret_cast<quint8*>(blob.data()), blob.size());
+    dst->save();
+    dst->close();
+    delete dst;
+
+    return true;
+}
+
+void MainWindow::updateTilesetInternals(const QString &fromBase, const QString &toName, int slot)
+{
+    SarcFilesystem sarc(game->fs->openFile("/Unit/" + toName + ".sarc"));
+    sarc.renameFile("BG_chk/d_bgchk_" + fromBase + ".bin", "d_bgchk_" + toName + ".bin");
+    sarc.renameFile("BG_tex/" + fromBase + ".ctpk", toName + ".ctpk");
+    sarc.renameFile("BG_unt/" + fromBase + ".bin", toName + ".bin");
+    sarc.renameFile("BG_unt/" + fromBase + "_add.bin", toName + "_add.bin");
+    sarc.renameFile("BG_unt/" + fromBase + "_hd.bin", toName + "_hd.bin");
+
+    Tileset ts(game, toName);
+    if (slot >= 0)
+        ts.setSlot(slot);
+    ts.setInternalName(toName);
+    ts.save();
+
+    loadTilesetList();
+}
+
+int MainWindow::tilesetSlotFromPrefix(const QString &name)
+{
+    if (name.startsWith("J_")) return 0;
+    if (name.startsWith("M_")) return 1;
+    if (name.startsWith("S1_")) return 2;
+    if (name.startsWith("S2_")) return 3;
+    return -1;
+}
+
+QString MainWindow::tilesetPrefixForSlot(int slot)
+{
+    switch (slot)
+    {
+    case 0: return "J_";
+    case 2: return "S1_";
+    case 3: return "S2_";
+    }
+    return "M_";
+}
+
+QString MainWindow::stripTilesetPrefix(const QString &name)
+{
+    if (name.startsWith("J_") || name.startsWith("M_"))
+        return name.mid(2);
+    if (name.startsWith("S1_") || name.startsWith("S2_"))
+        return name.mid(3);
+    return name;
+}
+
+QString MainWindow::ensureTilesetSlot(const QString &name, int slot)
+{
+    return tilesetPrefixForSlot(slot) + stripTilesetPrefix(name);
 }

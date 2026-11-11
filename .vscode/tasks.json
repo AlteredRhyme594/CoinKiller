@@ -1,0 +1,12 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "type": "shell",
+      "command": "mkdir build -Force && cd build && qmake ../CoinKiller.pro CONFIG+=debug && mingw32-make -j8",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": ["$gcc"]
+    }
+  ]
+}

@@ -64,7 +64,7 @@ public slots:
     void handleSelectionChanged(Object* obj);
     void deselect();
     void updateEditors();
-    void scrollTo(int x, int y);
+    void scrollTo(float x, float y);
 
 private slots:
     void toggleLayer(bool toggle);
@@ -191,8 +191,6 @@ private:
     void changeEvent(QEvent* event);
 
     void updateAreaSelector(int index = -1);
-
-    float zoom;
 
     void loadArea(int id, bool closeLevel = true, bool init = false);
     bool closeLvlOnClose = true;
